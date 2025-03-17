@@ -1,0 +1,6 @@
+{
+  "sales": true,
+  "stock": true,
+  "reports": true,
+  "admin": true
+}
