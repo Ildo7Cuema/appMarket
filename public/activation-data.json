@@ -1,8 +1,1 @@
-{
-  "active": true,
-  "expiration": "2025-03-16T10:43:27.711Z",
-  "plan": "hora_1",
-  "activationDate": "2025-03-16T09:43:27.712Z",
-  "status": "active",
-  "testPeriod": true
-}
+{"active":true,"expiration":"2025-04-20T08:14:44.996Z","plan":"mensal","activationDate":"2025-03-21T08:14:44.997Z","status":"active","testPeriod":false}
