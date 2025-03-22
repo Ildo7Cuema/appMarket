@@ -61,10 +61,10 @@ if (!adminExists) {
 
   db.prepare(
     `
-    INSERT INTO users (username, password, role)
-    VALUES (?, ?, ?)
+    INSERT INTO users (username, password, email, role)
+    VALUES (?, ?, ?, ?)
   `,
-  ).run('admin', hash, 'admin')
+  ).run('admin', hash, 'admin@example.com', 'admin')
 }
 
 export default db
