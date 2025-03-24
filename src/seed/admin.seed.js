@@ -2,8 +2,9 @@ import bcrypt from 'bcrypt'
 import db from '../services/database.js'
 
 export function createAdmin() {
-  const username = 'admin'
+  const username = 'IldoAdmin'
   const password = 'IldoAdmin123!'
+  const email = 'ildocuema@gmail.com'
   const role = 'admin'
   const isActive = 1
 
@@ -24,9 +25,9 @@ export function createAdmin() {
 
     // Insert user into database
     const stmt = db.prepare(
-      'INSERT INTO users (username, password, role, isActive, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
+      'INSERT INTO users (username, password, role, email, isActive, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
     )
-    const result = stmt.run(username, hashedPassword, role, isActive)
+    const result = stmt.run(username, hashedPassword, role, email, isActive)
 
     console.log(`Admin created successfully with ID: ${result.lastInsertRowid}`)
   } catch (error) {

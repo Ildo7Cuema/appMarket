@@ -62,5 +62,16 @@
     "node": "^28 || ^26 || ^24 || ^22 || ^20 || ^18",
     "npm": ">= 6.13.4",
     "yarn": ">= 1.21.1"
-  }
+  },
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ildo7Cuema/appMarket.git"
+  },
+  "keywords": [],
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ildo7Cuema/appMarket/issues"
+  },
+  "homepage": "https://github.com/Ildo7Cuema/appMarket#readme"
 }

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import bcrypt from 'bcryptjs'
 import fs from 'fs'
+import path from 'path'
 
 let db
 try {
@@ -13,7 +14,7 @@ try {
   }
 
   // Create database with proper permissions
-  db = new Database('./server/appmarket.db', {
+  db = new Database(path.join('server', 'appmarket.db'), {
     verbose: console.log,
     fileMustExist: false,
   })
@@ -31,7 +32,9 @@ db.prepare(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('admin', 'cashier')),
+    email TEXT UNIQUE,
+    role TEXT NOT NULL,
+    isActive INTEGER DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `,
@@ -61,10 +64,10 @@ if (!adminExists) {
 
   db.prepare(
     `
-    INSERT INTO users (username, password, email, role)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO users (username, password, email, role, isActive)
+    VALUES (?, ?, ?, ?, ?)
   `,
-  ).run('admin', hash, 'admin@example.com', 'admin')
+  ).run('IldoAdmin', hash, 'ildocuema@gmail.com', 'admin', 1)
 }
 
 export default db
