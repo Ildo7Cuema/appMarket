@@ -1,7 +1,16 @@
 <template>
   <q-page padding>
     <div class="row q-mb-md q-pa-sm">
-      <div class="col-12 text-right">
+      <div class="col-6">
+        <q-input
+          dense
+          v-model="searchTerm"
+          label="Pesquisar (nome, código ou categoria)"
+          debounce="500"
+          clearable
+        />
+      </div>
+      <div class="col-6 text-right">
         <q-btn
           outline
           color="primary"
@@ -432,10 +441,10 @@
               accept=".jpg, .png, .jpeg"
               clearable
               class="q-mt-sm"
-              max-file-size="5242880"
+              max-file-size="47185920"
               @rejected="onFileRejected"
               :rules="[
-                (val) => !val || val.size <= 5242880 || 'Tamanho máximo de 5MB',
+                (val) => !val || val.size <= 47185920 || 'Tamanho máximo de 45MB',
                 (val) =>
                   !val || ['image/jpeg', 'image/png'].includes(val.type) || 'Formato inválido',
               ]"
@@ -620,7 +629,17 @@ const productPagination = ref({
   rowsPerPage: 20,
 })
 
-const products = computed(() => stockStore.products)
+const products = computed(() => {
+  if (!searchTerm.value) return stockStore.products
+
+  const term = searchTerm.value.toLowerCase()
+  return stockStore.products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(term) ||
+      p.code.toLowerCase().includes(term) ||
+      (p.category_name && p.category_name.toLowerCase().includes(term)),
+  )
+})
 
 async function loadData() {
   try {

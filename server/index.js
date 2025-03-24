@@ -117,7 +117,7 @@ function initializeDatabase() {
       quantity INTEGER NOT NULL,
       category_id INTEGER,
       image_url TEXT,
-      price_with_tax REAL
+      price_with_tax REAL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
     );
