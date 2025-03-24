@@ -30,7 +30,7 @@ import Database from 'better-sqlite3'
 // Initialize database
 const db = new Database(path.join('server', 'appmarket.db'), {
   verbose: console.log,
-  fileMustExist: true,
+  fileMustExist: false // Alterado para false para permitir criação do arquivo
 })
 
 // Create tables if they don't exist
@@ -87,7 +87,7 @@ function initializeDatabase() {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       role TEXT NOT NULL,
-      isActive BOOLEAN DEFAULT 1,
+      isActive INTEGER DEFAULT 1,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -116,6 +116,8 @@ function initializeDatabase() {
       price REAL NOT NULL,
       quantity INTEGER NOT NULL,
       category_id INTEGER,
+      image_url TEXT,
+      price_with_tax REAL NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
     );
