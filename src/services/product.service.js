@@ -158,17 +158,22 @@ export default {
 
   async deleteProduct(id) {
     try {
-      // First check if product exists
-      const product = await this.getProduct(id)
-      if (!product) {
-        throw new Error('Produto não encontrado')
-      }
-
-      // Delete the product
       const response = await axios.delete(`${API_URL}/products/${id}`)
+      console.log(response)
       return response.data
     } catch (error) {
-      throw new Error('Erro ao excluir produto: ' + error.message)
+      if (error.response) {
+        // Erro da API
+        const message =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          `Erro ${error.response.status} ao excluir produto`
+        throw new Error(message)
+      } else if (error.request) {
+        throw new Error('Sem resposta do servidor ao tentar excluir produto')
+      } else {
+        throw new Error('Erro ao configurar requisição: ' + error.message)
+      }
     }
   },
 

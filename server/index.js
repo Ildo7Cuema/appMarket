@@ -9,20 +9,43 @@ import crypto from 'crypto'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// Create Express app
+const app = express()
+
 // Configure multer for logo uploads
 const upload = multer({
   storage: multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, path.join(__dirname, 'uploads'))
+      const uploadDir = path.join(__dirname, 'uploads')
+      // Criar diretório se não existir
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true })
+      }
+      console.log('Diretório de upload:', uploadDir)
+      cb(null, uploadDir)
     },
     filename: function (req, file, cb) {
-      cb(null, Date.now() + path.extname(file.originalname))
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
+      const filename = uniqueSuffix + path.extname(file.originalname)
+      console.log('Nome do arquivo gerado:', filename)
+      cb(null, filename)
     },
   }),
   limits: {
-    fileSize: 30 * 1024 * 1024, // 5MB limit
+    fileSize: 30 * 1024 * 1024, // 30MB limit
+  },
+  fileFilter: function (req, file, cb) {
+    // Aceitar apenas imagens
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg']
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Apenas imagens são permitidas'))
+    }
+    cb(null, true)
   },
 })
+
+// Servir arquivos estáticos da pasta uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import Database from 'better-sqlite3'
@@ -172,8 +195,7 @@ function initializeDatabase() {
   return db
 }
 
-const app = express()
-console.log('Express app created')
+// Configurar middlewares e rotas
 
 app.use(
   cors({
@@ -655,9 +677,12 @@ app.get('/api/products', async (req, res) => {
       SELECT
         p.*,
         c.name as category_name,
-        c.description as category_description
+        c.description as category_description,
+        p.quantity as stock,
+        COALESCE(p.price_with_tax, p.price) as final_price
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
+      ORDER BY p.name ASC
     `,
       )
       .all()
@@ -731,12 +756,13 @@ app.post('/api/products', async (req, res) => {
 app.put('/api/products/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, description, price, quantity, category_id } = req.body
+    const { name, description, price, quantity, category_id, image_url, code, price_with_tax } =
+      req.body
 
     // Validate required fields
-    if (!name || !price || !quantity) {
+    if (!name || !price || !quantity || !code) {
       return res.status(400).json({
-        message: 'Name, price and quantity are required',
+        message: 'Name, price, quantity and code are required',
       })
     }
 
@@ -747,7 +773,10 @@ app.put('/api/products/:id', async (req, res) => {
         description = ?,
         price = ?,
         quantity = ?,
-        category_id = ?
+        category_id = ?,
+        image_url = ?,
+        code = ?,
+        price_with_tax = ?
       WHERE id = ?
     `)
     const productResult = productStmt.run(
@@ -756,6 +785,9 @@ app.put('/api/products/:id', async (req, res) => {
       price,
       quantity,
       category_id || null,
+      image_url || null,
+      code,
+      price_with_tax || null,
       id,
     )
 
@@ -780,6 +812,85 @@ app.put('/api/products/:id', async (req, res) => {
     })
   } catch (error) {
     console.error('Error updating product:', error)
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: error.message,
+    })
+  }
+})
+
+// Endpoint para servir imagens de produtos
+app.get('/api/products/images/:filename', (req, res) => {
+  try {
+    const { filename } = req.params
+    const filePath = path.join(__dirname, 'uploads', filename)
+
+    if (fs.existsSync(filePath)) {
+      const fileExt = path.extname(filename).toLowerCase()
+      let contentType = 'application/octet-stream'
+
+      // Definir content-type baseado na extensão
+      if (fileExt === '.jpg' || fileExt === '.jpeg') {
+        contentType = 'image/jpeg'
+      } else if (fileExt === '.png') {
+        contentType = 'image/png'
+      }
+
+      res.setHeader('Content-Type', contentType)
+      res.sendFile(filePath)
+    } else {
+      res.status(404).json({ message: 'Imagem não encontrada' })
+    }
+  } catch (error) {
+    console.error('Erro ao servir imagem:', error)
+    res.status(500).json({ message: 'Erro ao carregar imagem' })
+  }
+})
+
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Get product to check for image
+    const product = db.prepare('SELECT * FROM products WHERE id = ?').get(id)
+
+    if (!product) {
+      return res.status(404).json({
+        message: 'Product not found',
+      })
+    }
+
+    // Delete product from database
+    const stmt = db.prepare('DELETE FROM products WHERE id = ?')
+    const result = stmt.run(id)
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        message: 'Product not found',
+      })
+    }
+
+    // If product has an image, delete it from uploads
+    if (product.image_url) {
+      try {
+        const filename = path.basename(product.image_url)
+        const filePath = path.join(__dirname, 'uploads', filename)
+
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath)
+          console.log('Deleted product image:', filePath)
+        }
+      } catch (err) {
+        console.error('Error deleting product image:', err)
+        // Continue even if image deletion fails
+      }
+    }
+
+    return res.status(200).json({
+      message: 'Product deleted successfully',
+    })
+  } catch (error) {
+    console.error('Error deleting product:', error)
     return res.status(500).json({
       message: 'Internal server error',
       error: error.message,
@@ -2350,13 +2461,16 @@ app.get('/api/sales/:id', async (req, res) => {
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
+      console.log('Nenhum arquivo recebido')
       return res.status(400).json({
         message: 'Nenhum arquivo enviado',
         error: 'Arquivo ausente',
       })
     }
 
-    const imageUrl = `${BASE_URL}/uploads/${req.file.filename}`
+    console.log('Arquivo recebido:', req.file)
+    const imageUrl = `/uploads/${req.file.filename}`
+    console.log('URL da imagem:', imageUrl)
 
     return res.status(200).json({
       message: 'Upload realizado com sucesso',
@@ -2451,7 +2565,8 @@ app.use('/uploads', express.static('uploads'))
 console.log('Static files configured')
 
 // Error handling middleware
-app.use((err, req, res) => {
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
   console.error('Error:', {
     message: err.message,
     stack: err.stack,
@@ -2478,10 +2593,18 @@ app.use((err, req, res) => {
   }
 
   // Default error handler
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-  })
+  if (res && typeof res.status === 'function') {
+    res.status(err.status || 500).json({
+      message: err.message || 'Internal server error',
+      error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+      timestamp: new Date().toISOString(),
+    })
+  } else {
+    console.error('Critical: Response object not available', {
+      error: err,
+      timestamp: new Date().toISOString(),
+    })
+  }
 })
 
 // 404 handler

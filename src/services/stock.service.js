@@ -86,4 +86,24 @@ export default {
       throw error
     }
   },
+
+  async updateProduct(id, product) {
+    try {
+      const response = await api.put(`/products/${id}`, product)
+      return response.data
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error)
+      throw error
+    }
+  },
+
+  async deleteProduct(id) {
+    try {
+      const response = await api.delete(`/products/${id}`)
+      return response.data
+    } catch (error) {
+      console.error('Erro ao deletar produto:', error)
+      throw error
+    }
+  },
 }

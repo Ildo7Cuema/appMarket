@@ -111,6 +111,40 @@ export const useStockStore = defineStore('stock', () => {
     }
   }
 
+  async function updateProduct(product) {
+    try {
+      loading.value = true
+      console.log('Atualizando produto no store:', product)
+
+      // Verificar se o produto tem ID
+      if (!product.id) {
+        throw new Error('ID do produto é necessário para atualização')
+      }
+
+      // Chamar o serviço para atualizar o produto
+      const updatedProduct = await stockService.updateProduct(product.id, product)
+
+      // Atualizar a lista de produtos
+      const index = products.value.findIndex((p) => p.id === product.id)
+      if (index !== -1) {
+        products.value[index] = { ...products.value[index], ...updatedProduct }
+      }
+
+      $q.notify({
+        type: 'positive',
+        message: 'Produto atualizado com sucesso',
+      })
+
+      return updatedProduct
+    } catch (error) {
+      showError('Erro ao atualizar produto')
+      console.error('Erro ao atualizar produto:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
   function showError(message) {
     $q.notify({
       type: 'negative',
@@ -135,5 +169,6 @@ export const useStockStore = defineStore('stock', () => {
     loadBatches,
     addMovement,
     addProduct,
+    updateProduct,
   }
 })

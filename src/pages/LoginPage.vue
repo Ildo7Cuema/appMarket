@@ -6,7 +6,14 @@
           <!-- Banner/Imagem do lado esquerdo -->
           <div class="login-banner col-md-6 col-sm-12">
             <div class="banner-content flex flex-center column">
-              <img src="/images/logo.png" alt="Market2 Logo" class="logo q-mb-md" />
+              <img
+                src="/images/logo.png"
+                alt="Market2 Logo"
+                class="logo q-mb-md"
+                loading="eager"
+                width="80"
+                height="80"
+              />
               <h1 class="text-h3 text-white q-mb-md">Market2</h1>
               <p class="text-subtitle1 text-white q-mb-xl">
                 Sistema de Gestão de Vendas e Facturamento
@@ -126,10 +133,26 @@ const currentYear = computed(() => new Date().getFullYear())
 
 // Definir o ícone na aba do navegador
 onMounted(() => {
-  const link = document.querySelector("link[rel~='icon']") || document.createElement('link')
+  // Remover qualquer favicon existente
+  const existingLinks = document.querySelectorAll("link[rel~='icon'], link[rel~='shortcut icon']")
+  existingLinks.forEach((link) => link.parentNode.removeChild(link))
+
+  // Criar preload para o favicon
+  const preload = document.createElement('link')
+  preload.rel = 'preload'
+  preload.href = '/images/logo.svg'
+  preload.as = 'image'
+  preload.type = 'image/svg+xml'
+  document.head.appendChild(preload)
+
+  // Adicionar o favicon
+  const link = document.createElement('link')
   link.rel = 'icon'
+  link.type = 'image/svg+xml'
   link.href = '/images/logo.svg'
   document.head.appendChild(link)
+
+  // Definir o título da página
   document.title = 'Market2 - Login'
 })
 
@@ -226,9 +249,11 @@ async function onSubmit() {
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1287&q=80')
-      center/cover;
-    opacity: 0.1;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15) 0%, transparent 20%),
+      radial-gradient(circle at 70% 60%, rgba(255, 255, 255, 0.1) 0%, transparent 30%),
+      radial-gradient(circle at 40% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 25%);
+    opacity: 1;
   }
 
   .banner-content {

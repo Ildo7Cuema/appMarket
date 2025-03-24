@@ -189,7 +189,7 @@
           dense
           title="Gestão de Produtos e Stock"
           :rows="products"
-          :columns="productColumns"
+          :columns="columns"
           row-key="id"
           :loading="loading"
           :pagination="productPagination"
@@ -223,22 +223,66 @@
           </template>
 
           <!-- Custom Stock Cell -->
-          <template v-slot:body-cell-stock="props">
+          <template v-slot:body-cell-quantity="props">
             <q-td :props="props">
               <q-linear-progress
-                :value="props.row.stock / props.row.max_stock"
+                :value="props.row.quantity / (props.row.max_stock || 100)"
                 :color="
-                  props.row.stock <= 5 ? 'negative' : props.row.stock <= 20 ? 'warning' : 'positive'
+                  props.row.quantity <= 5
+                    ? 'negative'
+                    : props.row.quantity <= 20
+                      ? 'warning'
+                      : 'positive'
                 "
                 size="25px"
                 class="q-mt-sm"
               >
                 <div class="absolute-full flex flex-center">
                   <q-badge color="white" text-color="primary">
-                    {{ props.row.stock }} / {{ props.row.max_stock }}
+                    {{ props.row.quantity || 0 }} / {{ props.row.max_stock || 100 }}
                   </q-badge>
                 </div>
               </q-linear-progress>
+            </q-td>
+          </template>
+
+          <!-- Custom Image Cell -->
+          <template v-slot:body-cell-image_url="props">
+            <q-td :props="props">
+              <q-img
+                v-if="props.row.image_url"
+                :src="getImageUrl(props.row.image_url)"
+                spinner-color="primary"
+                style="height: 50px; max-width: 50px"
+                fit="contain"
+                @error="handleImageError"
+              >
+                <template v-slot:error>
+                  <div class="absolute-full flex flex-center bg-negative text-white">
+                    Erro ao carregar imagem
+                  </div>
+                </template>
+              </q-img>
+              <q-img
+                v-else
+                :src="DEFAULT_IMAGE_URL"
+                style="height: 50px; max-width: 50px"
+                fit="contain"
+              />
+            </q-td>
+          </template>
+
+          <!-- Custom Price Cell -->
+          <template v-slot:body-cell-price="props">
+            <q-td :props="props">
+              <div class="text-right">
+                <div class="text-weight-bold">
+                  Kz {{ Number(props.row.price).toLocaleString() }}
+                </div>
+                <div v-if="props.row.price_with_tax" class="text-caption text-grey-8">
+                  Com IVA: Kz {{ Number(props.row.price_with_tax).toLocaleString() }}
+                </div>
+              </div>
             </q-td>
           </template>
 
@@ -266,18 +310,29 @@
           >
             <q-card class="my-card">
               <q-img
-                :src="product.image_url || 'https://placehold.co/400x200'"
+                :src="getImageUrl(product.image_url)"
                 :ratio="16 / 9"
                 class="cursor-pointer"
                 @click="editProduct(product)"
+                loading="eager"
+                @error="handleImageError"
               >
+                <template v-slot:error>
+                  <div class="absolute-full flex flex-center bg-negative text-white">
+                    Erro ao carregar imagem
+                  </div>
+                </template>
                 <q-badge
                   floating
                   :color="
-                    product.stock <= 5 ? 'negative' : product.stock <= 20 ? 'warning' : 'positive'
+                    product.quantity <= 5
+                      ? 'negative'
+                      : product.quantity <= 20
+                        ? 'warning'
+                        : 'positive'
                   "
                 >
-                  {{ product.stock }} em estoque
+                  {{ product.quantity || 0 }} em estoque
                 </q-badge>
               </q-img>
 
@@ -291,9 +346,9 @@
 
               <q-card-section class="q-pt-none">
                 <div class="text-h6 text-primary">
-                  {{ formatPrice(product.price_with_tax || product.price) }}
+                  Kz {{ Number(product.price).toLocaleString() }}
                   <div v-if="product.price_with_tax" class="text-caption text-grey-8">
-                    (Preço base: {{ formatPrice(product.price) }})
+                    Com IVA: Kz {{ Number(product.price_with_tax).toLocaleString() }}
                   </div>
                 </div>
                 <div class="text-caption">
@@ -377,11 +432,42 @@
               accept=".jpg, .png, .jpeg"
               clearable
               class="q-mt-sm"
+              max-file-size="5242880"
+              @rejected="onFileRejected"
+              :rules="[
+                (val) => !val || val.size <= 5242880 || 'Tamanho máximo de 5MB',
+                (val) =>
+                  !val || ['image/jpeg', 'image/png'].includes(val.type) || 'Formato inválido',
+              ]"
             >
               <template v-slot:prepend>
                 <q-icon name="attach_file" />
               </template>
+              <template v-slot:after>
+                <q-btn
+                  v-if="productForm.image_url && !productForm.image"
+                  flat
+                  round
+                  dense
+                  color="negative"
+                  icon="delete"
+                  @click="removeImage"
+                >
+                  <q-tooltip>Remover imagem</q-tooltip>
+                </q-btn>
+              </template>
             </q-file>
+
+            <!-- Prévia da imagem -->
+            <div v-if="previewImage" class="q-mt-sm">
+              <div class="text-caption q-mb-xs">Prévia da imagem:</div>
+              <q-img
+                :src="previewImage"
+                style="max-width: 100%; max-height: 150px; object-fit: contain"
+                :ratio="4 / 3"
+                class="rounded-borders"
+              />
+            </div>
 
             <q-toggle
               dense
@@ -420,9 +506,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useStockStore } from '../stores/stock-store'
 import productService from '../services/product.service'
+import { API_BASE_URL, DEFAULT_IMAGE_URL, getFullImageUrl } from '../config/api'
 
 const $q = useQuasar()
 const stockStore = useStockStore()
+
+console.log('API_BASE_URL no componente ProductsStockPage:', API_BASE_URL)
 
 // Declare all variables
 const loading = ref(false)
@@ -454,7 +543,7 @@ const productForm = ref({
   price: 0,
   quantity: 0,
   category_id: null,
-  is_taxed: false,
+  taxable: false,
   image: null,
 })
 
@@ -463,62 +552,62 @@ const newProducts = () => {
   showProductDialog.value = true
 }
 
-const productColumns = [
+const columns = [
+  {
+    name: 'image_url',
+    label: 'Imagem',
+    field: 'image_url',
+    align: 'center',
+    style: 'width: 80px',
+  },
   {
     name: 'code',
+    align: 'left',
     label: 'Código',
     field: 'code',
-    align: 'left',
     sortable: true,
-    filterable: true,
+    style: 'width: 120px',
   },
   {
     name: 'name',
+    align: 'left',
     label: 'Nome',
     field: 'name',
-    align: 'left',
     sortable: true,
-    filterable: true,
-  },
-  {
-    name: 'description',
-    label: 'Descrição',
-    field: 'description',
-    sortable: true,
-    filterable: true,
-    align: 'left',
-  },
-  {
-    name: 'category',
-    label: 'Categoria',
-    field: (row) => row.category_name || 'Sem categoria',
-    align: 'left',
-    sortable: true,
-    filterable: true,
+    style: 'width: 200px',
   },
   {
     name: 'price',
+    align: 'right',
     label: 'Preço',
-    field: (row) => row.price_with_tax || row.price,
-    format: (val) => (val ? `Kz ${Number(val).toLocaleString()}` : 'Kz 0'),
+    field: 'price',
     sortable: true,
-    filterable: true,
-    align: 'left',
-    classes: (row) => (row.price_with_tax ? 'text-green' : ''),
+    format: (val) => `Kz ${Number(val).toLocaleString()}`,
+    style: 'width: 120px',
   },
   {
     name: 'quantity',
+    align: 'right',
     label: 'Stock',
     field: 'quantity',
     sortable: true,
-    filterable: true,
-    align: 'center',
+    format: (val) => val.toLocaleString(),
+    style: 'width: 100px',
+  },
+  {
+    name: 'category',
+    align: 'left',
+    label: 'Categoria',
+    field: (row) => row.category_name || 'Sem categoria',
+    sortable: true,
+    style: 'width: 150px',
   },
   {
     name: 'actions',
-    label: 'Ações',
-    field: '',
     align: 'center',
+    label: 'Ações',
+    field: 'actions',
+    style: 'width: 100px',
   },
 ]
 
@@ -530,10 +619,6 @@ const productPagination = ref({
   page: 1,
   rowsPerPage: 20,
 })
-
-function formatPrice(price) {
-  return `Kz ${Number(price).toLocaleString()}`
-}
 
 const products = computed(() => stockStore.products)
 
@@ -553,8 +638,26 @@ async function loadData() {
 }
 
 function editProduct(product) {
-  productForm.value = { ...product }
+  console.log('Editando produto:', product)
+  console.log('URL da imagem do produto:', product.image_url)
+
   isEditing.value = true
+
+  // Deep clone para não modificar o objeto original
+  productForm.value = {
+    id: product.id,
+    code: product.code,
+    name: product.name,
+    description: product.description || '',
+    price: product.price,
+    quantity: product.quantity || 0,
+    category_id: product.category_id,
+    taxable: Boolean(product.price_with_tax),
+    image_url: product.image_url,
+    image: null, // Reset image file, usaremos o image_url existente
+  }
+
+  console.log('Formulário preenchido para edição:', productForm.value)
   showProductDialog.value = true
 }
 
@@ -567,15 +670,20 @@ function confirmDelete(product) {
   }).onOk(async () => {
     try {
       loading.value = true
-      await stockStore.deleteProduct(product.id)
+      await productService.deleteProduct(product.id)
+      await loadData()
       $q.notify({
         type: 'positive',
         message: 'Produto excluído com sucesso',
       })
     } catch (error) {
+      console.error('Erro ao excluir produto:', error)
       $q.notify({
         type: 'negative',
-        message: error.message || 'Erro ao excluir produto',
+        message: error.message.includes('Erro') ? error.message : 'Erro ao excluir produto',
+        caption: error.response?.data?.details || '',
+        timeout: 5000,
+        actions: [{ icon: 'close', color: 'white' }],
       })
     } finally {
       loading.value = false
@@ -587,18 +695,26 @@ async function saveProduct() {
   try {
     loading.value = true
 
-    let imageUrl = null
+    let imageUrl = productForm.value.image_url || null
 
     // Handle image upload if present
-    if (productForm.value.image) {
-      const formData = new FormData()
-      formData.append('file', productForm.value.image)
+    if (productForm.value.image && productForm.value.image instanceof File) {
+      imageUrl = await uploadImage(productForm.value.image)
 
-      const uploadResponse = await productService.uploadImage(formData)
-      imageUrl = uploadResponse.url
+      if (!imageUrl && isEditing.value) {
+        // Se falhar o upload mas estiver editando, mantém a imagem existente
+        imageUrl = productForm.value.image_url
+        $q.notify({
+          type: 'warning',
+          message: 'Imagem não atualizada - mantendo imagem existente',
+        })
+      }
+    } else if (isEditing.value && productForm.value.image_url) {
+      // Se estiver editando e já houver uma URL, mantém a mesma
+      console.log('Mantendo URL existente durante edição:', imageUrl)
     }
 
-    // Calculate final price based on tax
+    // Preparar objeto do produto com a URL da imagem
     const productData = {
       ...productForm.value,
       price: productForm.value.price,
@@ -607,27 +723,43 @@ async function saveProduct() {
       taxable: productForm.value.taxable,
     }
 
+    console.log('Objeto do produto a ser salvo:', productData)
+    delete productData.image // Remover o objeto File antes de enviar
+
     if (isEditing.value) {
       await stockStore.updateProduct(productData)
-      loadData()
+      $q.notify({
+        type: 'positive',
+        message: 'Produto atualizado com sucesso',
+      })
     } else {
       await stockStore.addProduct(productData)
-      loadData()
+      $q.notify({
+        type: 'positive',
+        message: 'Produto adicionado com sucesso',
+      })
     }
 
-    $q.notify({
-      type: 'positive',
-      message: `Produto ${isEditing.value ? 'atualizado' : 'criado'} com sucesso`,
-    })
-
-    // Wait for UI to update before closing dialog
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    resetProductForm()
+    // Reset form and close dialog
+    productForm.value = {
+      id: null,
+      code: '',
+      name: '',
+      description: '',
+      price: 0,
+      quantity: 0,
+      category_id: null,
+      taxable: false,
+      image: null,
+    }
+    isEditing.value = false
     showProductDialog.value = false
+    loadData()
   } catch (error) {
+    console.error('Erro ao salvar produto:', error)
     $q.notify({
       type: 'negative',
-      message: error.message || `Erro ao ${isEditing.value ? 'atualizar' : 'criar'} produto`,
+      message: error.message || 'Erro ao salvar produto',
     })
   } finally {
     loading.value = false
@@ -643,7 +775,7 @@ function resetProductForm() {
     price: 0,
     quantity: 0,
     category_id: null,
-    is_taxed: false,
+    taxable: false,
     image: null,
   }
   isEditing.value = false
@@ -717,8 +849,132 @@ async function exportProducts() {
   }
 }
 
+// Função para obter URL da imagem com tratamento de erro
+function getImageUrl(url) {
+  if (!url) return DEFAULT_IMAGE_URL
+
+  try {
+    // Se já for uma URL completa, retorna diretamente
+    if (url.startsWith('http') || url.startsWith('blob:')) {
+      return url
+    }
+
+    // Se for um caminho relativo, adiciona a base URL
+    let fullUrl = getFullImageUrl(url)
+
+    // Verifica se a URL está correta
+    if (!fullUrl.startsWith('http') && !fullUrl.startsWith('/')) {
+      fullUrl = `${API_BASE_URL}/${fullUrl}`
+    }
+
+    console.log('URL da imagem:', fullUrl)
+    return fullUrl
+  } catch (error) {
+    console.error('Erro ao gerar URL da imagem:', error)
+    return DEFAULT_IMAGE_URL
+  }
+}
+
+// Tratamento de erro para imagens
+function handleImageError(evt) {
+  console.error('Erro ao carregar imagem:', {
+    event: evt,
+    targetSrc: evt.target.src,
+    timestamp: new Date().toISOString(),
+  })
+
+  // Verificar se o placeholder existe antes de tentar substituir
+  const placeholder = new Image()
+  placeholder.src = DEFAULT_IMAGE_URL
+
+  placeholder.onload = () => {
+    evt.target.src = DEFAULT_IMAGE_URL
+  }
+
+  placeholder.onerror = () => {
+    console.error('Erro ao carregar placeholder')
+    evt.target.parentElement.innerHTML = `
+      <div class="absolute-full flex flex-center bg-grey-4 text-grey-8">
+        Imagem não disponível
+      </div>
+    `
+  }
+}
+
+// Computed property para a prévia da imagem
+const previewImage = computed(() => {
+  if (productForm.value.image && productForm.value.image instanceof File) {
+    return URL.createObjectURL(productForm.value.image)
+  } else if (productForm.value.image_url) {
+    return getImageUrl(productForm.value.image_url)
+  }
+  return null
+})
+
+function onFileRejected(rejectedEntries) {
+  $q.notify({
+    type: 'negative',
+    message: `Arquivo rejeitado: ${rejectedEntries[0].file.name}`,
+    caption: rejectedEntries[0].failedPropValidation,
+  })
+}
+
+function removeImage() {
+  $q.dialog({
+    title: 'Remover Imagem',
+    message: 'Deseja realmente remover a imagem deste produto?',
+    cancel: true,
+    persistent: true,
+  }).onOk(() => {
+    productForm.value.image_url = null
+    productForm.value.image = null
+    $q.notify({
+      type: 'positive',
+      message: 'Imagem removida com sucesso',
+    })
+  })
+}
+
+async function uploadImage(file) {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    if ($q?.loading?.show) {
+      $q.loading.show({
+        message: 'Enviando imagem...',
+      })
+    }
+
+    const uploadResponse = await productService.uploadImage(formData)
+
+    if (uploadResponse && uploadResponse.url) {
+      let imageUrl = uploadResponse.url
+      if (!imageUrl.startsWith('http')) {
+        imageUrl = `${API_BASE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`
+      }
+      return imageUrl
+    }
+  } catch (error) {
+    console.error('Erro no upload:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Erro ao enviar imagem',
+    })
+    return null
+  } finally {
+    if ($q?.loading?.hide) {
+      $q.loading.hide()
+    }
+  }
+}
+
 onMounted(() => {
   loadData()
+
+  // Pré-carregar a imagem de placeholder para evitar carregamento lazy
+  const img = new Image()
+  img.src = DEFAULT_IMAGE_URL
 })
 </script>
 
