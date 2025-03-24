@@ -190,6 +190,7 @@ async function onSubmit() {
       router.push('/')
     }, 500)
   } catch (error) {
+    console.log(error)
     let message = 'Falha no login'
 
     if (error.message.includes('Network Error') || error.message.includes('ECONNREFUSED')) {
@@ -198,6 +199,9 @@ async function onSubmit() {
       message = 'Erro de conexão com o banco de dados. Tente novamente mais tarde.'
     } else if (error.response && error.response.status === 401) {
       message = 'Usuário ou senha incorretos. Por favor, tente novamente.'
+    } else if (error == 'Error: Usuário inativo') {
+      router.push('/inactive-account')
+      return
     } else {
       message = error.message || 'Falha no login'
     }

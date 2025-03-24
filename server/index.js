@@ -500,6 +500,11 @@ app.post('/api/auth/login', async (req, res) => {
       })
     }
 
+    // Check if user is active
+    if (user.isActive !== 1) {
+      return res.status(403).json({ status: 403, message: 'Usuário inativo' })
+    }
+
     // Create JWT token
     const token = jwt.sign(
       {

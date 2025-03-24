@@ -4,6 +4,13 @@ const routes = [
     component: () => import('pages/LoginPage.vue'),
   },
   {
+    path: '/inactive-account',
+    component: () => import('pages/InactiveAccountPage.vue'),
+    meta: {
+      title: 'Conta Inativa',
+    },
+  },
+  {
     path: '/subscription',
     component: () => import('pages/SubscriptionPage.vue'),
     meta: {
