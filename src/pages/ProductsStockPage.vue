@@ -842,15 +842,72 @@ const productPagination = ref({
 })
 
 const products = computed(() => {
-  if (!searchTerm.value) return stockStore.products
+  let filtered = [...stockStore.products]
 
-  const term = searchTerm.value.toLowerCase()
-  return stockStore.products.filter(
-    (p) =>
-      p.name.toLowerCase().includes(term) ||
-      p.code.toLowerCase().includes(term) ||
-      (p.category_name && p.category_name.toLowerCase().includes(term)),
-  )
+  // Apply search term filter
+  if (searchTerm.value) {
+    const term = searchTerm.value.toLowerCase()
+    filtered = filtered.filter(
+      (p) =>
+        p.name.toLowerCase().includes(term) ||
+        p.code.toLowerCase().includes(term) ||
+        (p.category_name && p.category_name.toLowerCase().includes(term)),
+    )
+  }
+
+  // Apply category filter
+  if (activeFilters.value.category) {
+    filtered = filtered.filter((p) => p.category_id === activeFilters.value.category)
+  }
+
+  // Apply price filters
+  if (typeof activeFilters.value.minPrice === 'number') {
+    filtered = filtered.filter((p) => p.price >= activeFilters.value.minPrice)
+  }
+  if (typeof activeFilters.value.maxPrice === 'number') {
+    filtered = filtered.filter((p) => p.price <= activeFilters.value.maxPrice)
+  }
+
+  // Apply stock quantity filters
+  if (typeof activeFilters.value.minStock === 'number') {
+    filtered = filtered.filter((p) => p.quantity >= activeFilters.value.minStock)
+  }
+  if (typeof activeFilters.value.maxStock === 'number') {
+    filtered = filtered.filter((p) => p.quantity <= activeFilters.value.maxStock)
+  }
+
+  // Apply stock toggle filters
+  if (activeFilters.value.showLowStock && !activeFilters.value.showOutOfStock) {
+    filtered = filtered.filter((p) => p.quantity < 10 && p.quantity > 0)
+  } else if (activeFilters.value.showOutOfStock && !activeFilters.value.showLowStock) {
+    filtered = filtered.filter((p) => p.quantity === 0)
+  } else if (activeFilters.value.showLowStock && activeFilters.value.showOutOfStock) {
+    filtered = filtered.filter((p) => p.quantity < 10)
+  }
+
+  // Apply sorting
+  const field = sortOptions.value.field || 'name'
+  const order = sortOptions.value.order || 'asc'
+
+  filtered.sort((a, b) => {
+    let valA = a[field]
+    let valB = b[field]
+
+    // Handle nested fields
+    if (field === 'category') {
+      valA = a.category_name
+      valB = b.category_name
+    }
+
+    if (typeof valA === 'string') valA = valA.toLowerCase()
+    if (typeof valB === 'string') valB = valB.toLowerCase()
+
+    if (valA < valB) return order === 'asc' ? -1 : 1
+    if (valA > valB) return order === 'asc' ? 1 : -1
+    return 0
+  })
+
+  return filtered
 })
 
 async function loadData() {
