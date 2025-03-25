@@ -693,6 +693,69 @@ const sortOptions = ref({
   order: 'asc',
 })
 
+const activeFilterChips = computed(() => {
+  const chips = []
+
+  if (activeFilters.value.category) {
+    const category = categories.value.find((c) => c.id === activeFilters.value.category)
+    chips.push({
+      type: 'category',
+      label: `Categoria: ${category?.name || activeFilters.value.category}`,
+      color: 'primary',
+    })
+  }
+
+  if (activeFilters.value.minPrice) {
+    chips.push({
+      type: 'minPrice',
+      label: `Preço min: Kz ${activeFilters.value.minPrice}`,
+      color: 'green',
+    })
+  }
+
+  if (activeFilters.value.maxPrice) {
+    chips.push({
+      type: 'maxPrice',
+      label: `Preço max: Kz ${activeFilters.value.maxPrice}`,
+      color: 'green',
+    })
+  }
+
+  if (activeFilters.value.minStock) {
+    chips.push({
+      type: 'minStock',
+      label: `Estoque min: ${activeFilters.value.minStock}`,
+      color: 'blue',
+    })
+  }
+
+  if (activeFilters.value.maxStock) {
+    chips.push({
+      type: 'maxStock',
+      label: `Estoque max: ${activeFilters.value.maxStock}`,
+      color: 'blue',
+    })
+  }
+
+  if (activeFilters.value.showLowStock) {
+    chips.push({
+      type: 'showLowStock',
+      label: 'Baixo estoque',
+      color: 'warning',
+    })
+  }
+
+  if (activeFilters.value.showOutOfStock) {
+    chips.push({
+      type: 'showOutOfStock',
+      label: 'Sem estoque',
+      color: 'negative',
+    })
+  }
+
+  return chips
+})
+
 const productForm = ref({
   id: null,
   code: '',
@@ -1040,6 +1103,32 @@ function getImageUrl(url) {
   } catch (error) {
     console.error('Erro ao gerar URL da imagem:', error)
     return DEFAULT_IMAGE_URL
+  }
+}
+
+function removeFilter(filterType) {
+  switch (filterType) {
+    case 'category':
+      activeFilters.value.category = null
+      break
+    case 'minPrice':
+      activeFilters.value.minPrice = null
+      break
+    case 'maxPrice':
+      activeFilters.value.maxPrice = null
+      break
+    case 'minStock':
+      activeFilters.value.minStock = null
+      break
+    case 'maxStock':
+      activeFilters.value.maxStock = null
+      break
+    case 'showLowStock':
+      activeFilters.value.showLowStock = false
+      break
+    case 'showOutOfStock':
+      activeFilters.value.showOutOfStock = false
+      break
   }
 }
 
