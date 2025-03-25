@@ -200,11 +200,10 @@ export default {
         Código: product.code,
         Nome: product.name,
         Descrição: product.description,
-        Categoria: product.category?.name || 'Sem categoria',
+        Categoria: product.category_name || 'Sem categoria',
         Preço: product.price,
-        Estoque: product.stock,
+        Estoque: product.quantity,
         'Criado em': new Date(product.created_at).toLocaleDateString(),
-        'Atualizado em': new Date(product.updated_at).toLocaleDateString(),
       }))
 
       // Create worksheet

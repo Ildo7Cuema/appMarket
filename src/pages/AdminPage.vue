@@ -1,387 +1,433 @@
 <template>
-  <q-page class="q-pa-lg">
-    <!-- Page Header -->
-    <div class="row items-center q-mb-lg">
-      <div class="col">
-        <div class="text-h4 text-weight-bold">Painel Administrativo</div>
-        <div class="text-subtitle1 text-grey-8">Bem-vindo de volta, Administrador</div>
-      </div>
-      <div class="col-auto">
-        <q-btn
-          color="primary"
-          icon="refresh"
-          label="Atualizar Dados"
-          @click="refreshData"
-          :loading="loading"
-        />
-      </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="row q-col-gutter-md q-mb-lg">
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="people" class="q-mr-sm" color="blue-6" />
-              <div class="text-h6 text-grey-8">
-                Total de Usuários
-                <q-tooltip>Número total de usuários registrados no sistema</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-blue-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                {{ stats.totalUsers ?? 0 }}
-              </template>
-            </div>
-            <q-icon name="people_outline" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="wifi" class="q-mr-sm" color="green-6" />
-              <div class="text-h6 text-grey-8">
-                Sessões Ativas
-                <q-tooltip>Usuários ativos nos últimos 30 minutos</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-green-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                {{ stats.activeSessions || '--' }}
-              </template>
-            </div>
-            <q-icon name="wifi_find" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="monitor_heart" class="q-mr-sm" color="purple-6" />
-              <div class="text-h6 text-grey-8">
-                Saúde do Sistema
-                <q-tooltip>Status geral do sistema</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-purple-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                <q-icon
-                  :name="stats.systemHealth === 'good' ? 'check_circle' : 'warning'"
-                  :color="stats.systemHealth === 'good' ? 'positive' : 'negative'"
-                  size="2rem"
-                />
-              </template>
-            </div>
-            <q-icon name="monitor_heart" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="storage" class="q-mr-sm" color="orange-6" />
-              <div class="text-h6 text-grey-8">
-                Armaz. Usado
-                <q-tooltip>Espaço total utilizado no servidor</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-orange-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                {{ stats.storageUsed || '--' }}
-              </template>
-            </div>
-            <q-icon name="storage" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <!-- New Stats Cards -->
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="today" class="q-mr-sm" color="teal-6" />
-              <div class="text-h6 text-grey-8">
-                Vendas Hoje
-                <q-tooltip>Total de vendas realizadas hoje</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-teal-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                {{ stats.totalSalesDay }}
-              </template>
-            </div>
-            <q-icon name="today" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="calendar_month" class="q-mr-sm" color="indigo-6" />
-              <div class="text-h6 text-grey-8">
-                Vendas Mês
-                <q-tooltip>Total de vendas no mês atual</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-indigo-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                {{ stats.totalSalesMonth }}
-              </template>
-            </div>
-            <q-icon name="calendar_month" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="insights" class="q-mr-sm" color="deep-orange-6" />
-              <div class="text-h6 text-grey-8">
-                Vendas Ano
-                <q-tooltip>Total de vendas no ano atual</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-deep-orange-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                {{ stats.totalSalesYear || '--' }}
-              </template>
-            </div>
-            <q-icon name="insights" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-
-      <div class="col-12 col-md-3">
-        <q-card class="text-center">
-          <q-card-section>
-            <div class="row items-center q-mb-sm">
-              <q-icon name="inventory_2" class="q-mr-sm" color="cyan-6" />
-              <div class="text-h6 text-grey-8">
-                Total Produtos
-                <q-tooltip>Número total de produtos cadastrados</q-tooltip>
-              </div>
-            </div>
-            <div class="text-h4 text-weight-bold text-cyan-800">
-              <template v-if="loading">
-                <q-skeleton type="text" width="80px" />
-              </template>
-              <template v-else>
-                {{ stats.totalProducts ?? 0 }}
-              </template>
-            </div>
-            <q-icon name="inventory_2" class="stat-icon" />
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
-
-    <!-- Best Selling Products -->
-    <q-card class="q-mb-lg">
-      <q-card-section>
-        <div class="row items-center q-mb-md">
-          <div class="text-h5">Produtos Mais Vendidos</div>
-          <q-space />
-          <q-btn-toggle
-            v-model="salesPeriod"
-            toggle-color="primary"
-            :options="[
-              { label: '7 Dias', value: 7 },
-              { label: '30 Dias', value: 30 },
-              { label: '90 Dias', value: 90 },
-              { label: '1 Ano', value: 365 },
-            ]"
-            @update:model-value="fetchTopProducts"
-          />
+  <q-page class="admin-page">
+    <!-- Header com gradiente -->
+    <div class="header-section q-px-lg q-pt-lg q-pb-xl">
+      <div class="row items-center justify-between">
+        <div class="col-12 col-md-8">
+          <div class="text-h4 text-weight-bold text-white">Painel Administrativo</div>
+          <div class="text-subtitle1 text-grey-3 q-mt-sm">
+            Bem-vindo de volta, {{ username }}
+            <q-icon name="verified" color="light-blue-4" size="sm" class="q-ml-xs" />
+          </div>
         </div>
+        <div class="col-12 col-md-4 text-right">
+          <q-btn
+            color="white"
+            text-color="primary"
+            icon="refresh"
+            label="Atualizar Dados"
+            @click="refreshData"
+            :loading="loading"
+            class="q-px-md"
+            flat
+          >
+            <q-tooltip>Atualizar informações do painel</q-tooltip>
+          </q-btn>
+        </div>
+      </div>
+    </div>
 
-        <q-tabs v-model="activeTab" align="left" class="text-primary q-mb-md">
-          <q-tab name="table" label="Tabela" />
-          <q-tab name="chart" label="Gráfico" />
-        </q-tabs>
-
-        <q-tab-panels v-model="activeTab" animated>
-          <!-- Table View -->
-          <q-tab-panel name="table">
-            <q-table
-              :rows="topProducts"
-              :columns="topProductsColumns"
-              row-key="id"
-              :loading="loading"
-              loading-label="A carregar..."
-              :pagination="{
-                rowsPerPage: 10,
-                sortBy: 'total_sold',
-                descending: true,
-              }"
-              :filter="topProductsFilter"
-              @request="onTableRequest"
-            >
-              <template v-slot:top-right>
-                <q-input
-                  v-model="topProductsFilter"
-                  outlined
-                  dense
-                  placeholder="Pesquisar produto..."
-                  class="q-mr-sm"
-                />
-                <q-btn
-                  color="primary"
-                  icon="refresh"
-                  @click="fetchTopProducts"
-                  :loading="loading"
-                />
-                <q-btn color="secondary" icon="download" @click="exportData" class="q-ml-sm">
-                  <q-tooltip>Exportar dados</q-tooltip>
-                </q-btn>
-              </template>
-
-              <!-- Custom Total Sold Cell -->
-              <template v-slot:body-cell-total_sold="props">
-                <q-td :props="props">
-                  <div class="row items-center no-wrap">
-                    <q-linear-progress
-                      :value="props.row.total_sold / maxSold"
-                      color="primary"
-                      class="q-mr-sm"
-                      style="height: 10px; width: 100px"
-                    />
-                    <span>{{ props.value }}</span>
+    <!-- Cards Container com efeito de elevação -->
+    <div class="cards-container q-px-lg q-mt-xl">
+      <!-- Stats Cards -->
+      <div class="row q-col-gutter-lg">
+        <!-- Total de Usuários -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Total de Usuários</div>
+                  <div class="text-h4 text-weight-bold text-primary">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      {{ stats.totalUsers ?? 0 }}
+                    </template>
                   </div>
-                </q-td>
-              </template>
-            </q-table>
-          </q-tab-panel>
-
-          <!-- Chart View -->
-          <q-tab-panel name="chart">
-            <div class="row q-col-gutter-md">
-              <div class="col-12 col-md-6">
-                <q-card>
-                  <q-card-section>
-                    <div class="text-h6">Top 10 Produtos</div>
-                    <apexchart
-                      type="bar"
-                      height="350"
-                      :options="chartOptions"
-                      :series="chartSeries"
-                    />
-                  </q-card-section>
-                </q-card>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-blue-1 text-primary">
+                    <q-icon name="people" size="32px" />
+                  </q-avatar>
+                </div>
               </div>
-              <div class="col-12 col-md-6">
-                <q-card>
-                  <q-card-section>
-                    <div class="text-h6">Distribuição por Categoria</div>
-                    <apexchart
-                      type="pie"
-                      height="350"
-                      :options="pieChartOptions"
-                      :series="pieSeries"
-                    />
-                  </q-card-section>
-                </q-card>
-              </div>
-            </div>
-          </q-tab-panel>
-        </q-tab-panels>
-      </q-card-section>
-    </q-card>
-
-    <!-- Management Section
-    <q-card class="q-mb-lg">
-      <q-card-section>
-        <div class="text-h5 q-mb-md">Gestão do Sistema</div>
-
-        <div class="row q-col-gutter-md">
-          <div class="col-12 col-md-6">
-            <q-list bordered separator>
-              <q-item clickable v-ripple @click="navigateTo('employees')">
-                <q-item-section avatar>
-                  <q-icon name="people" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Gestão de Usuários</q-item-label>
-                  <q-item-label caption>Gerencie usuários e permissões do sistema</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item clickable v-ripple @click="navigateTo('settings')">
-                <q-item-section avatar>
-                  <q-icon name="settings" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Configurações do Sistema</q-item-label>
-                  <q-item-label caption>Configure as preferências do sistema</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item clickable v-ripple @click="navigateTo('logs')">
-                <q-item-section avatar>
-                  <q-icon name="list_alt" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Logs do Sistema</q-item-label>
-                  <q-item-label caption>Visualize atividades e eventos do sistema</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
-
-          <div class="col-12 col-md-6">
-            <q-card>
-              <q-card-section>
-                <div class="text-h6 q-mb-md">Actividades recentes</div>
-                <q-list>
-                  <q-item v-for="activity in recentActivities" :key="activity.id">
-                    <q-item-section avatar>
-                      <q-icon :name="activity.icon" :color="activity.color" />
-                    </q-item-section>
-                    <q-item-section>
-                      <q-item-label>{{ activity.title }}</q-item-label>
-                      <q-item-label caption>{{ activity.timestamp }}</q-item-label>
-                    </q-item-section>
-                  </q-item>
-                </q-list>
-              </q-card-section>
-            </q-card>
-          </div>
+              <q-linear-progress :value="0.75" color="blue-4" class="q-mt-sm" size="2px" rounded />
+            </q-card-section>
+          </q-card>
         </div>
-      </q-card-section>
-    </q-card>-->
+
+        <!-- Sessões Ativas -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Sessões Ativas</div>
+                  <div class="text-h4 text-weight-bold text-green">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      {{ stats.activeSessions || '--' }}
+                    </template>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-green-1 text-green">
+                    <q-icon name="wifi" size="32px" />
+                  </q-avatar>
+                </div>
+              </div>
+              <q-linear-progress :value="0.6" color="green-4" class="q-mt-sm" size="2px" rounded />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Saúde do Sistema -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Saúde do Sistema</div>
+                  <div class="text-h4 text-weight-bold text-purple">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      <q-icon
+                        :name="stats.systemHealth === 'good' ? 'check_circle' : 'warning'"
+                        :color="stats.systemHealth === 'good' ? 'positive' : 'negative'"
+                        size="2rem"
+                      />
+                    </template>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-purple-1 text-purple">
+                    <q-icon name="monitor_heart" size="32px" />
+                  </q-avatar>
+                </div>
+              </div>
+              <q-linear-progress :value="0.9" color="purple-4" class="q-mt-sm" size="2px" rounded />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Armazenamento -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Armaz. Usado</div>
+                  <div class="text-h4 text-weight-bold text-orange">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      {{ stats.storageUsed || '--' }}
+                    </template>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-orange-1 text-orange">
+                    <q-icon name="storage" size="32px" />
+                  </q-avatar>
+                </div>
+              </div>
+              <q-linear-progress
+                :value="0.45"
+                color="orange-4"
+                class="q-mt-sm"
+                size="2px"
+                rounded
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Vendas Hoje -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Vendas Hoje</div>
+                  <div class="text-weight-bold text-teal sales-value">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      {{ stats.totalSalesDay }}
+                    </template>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-teal-1 text-teal">
+                    <q-icon name="today" size="32px" />
+                  </q-avatar>
+                </div>
+              </div>
+              <q-linear-progress :value="0.8" color="teal-4" class="q-mt-sm" size="2px" rounded />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Vendas Mês -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Vendas Mês</div>
+                  <div class="text-weight-bold text-indigo sales-value">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      {{ stats.totalSalesMonth }}
+                    </template>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-indigo-1 text-indigo">
+                    <q-icon name="calendar_month" size="32px" />
+                  </q-avatar>
+                </div>
+              </div>
+              <q-linear-progress
+                :value="0.65"
+                color="indigo-4"
+                class="q-mt-sm"
+                size="2px"
+                rounded
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Vendas Ano -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Vendas Ano</div>
+                  <div class="text-weight-bold text-deep-orange sales-value">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      {{ stats.totalSalesYear || '--' }}
+                    </template>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-deep-orange-1 text-deep-orange">
+                    <q-icon name="insights" size="32px" />
+                  </q-avatar>
+                </div>
+              </div>
+              <q-linear-progress
+                :value="0.85"
+                color="deep-orange-4"
+                class="q-mt-sm"
+                size="2px"
+                rounded
+              />
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Total Produtos -->
+        <div class="col-12 col-sm-6 col-md-3">
+          <q-card class="stats-card">
+            <q-card-section>
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-grey-8 text-subtitle1 q-mb-xs">Total Produtos</div>
+                  <div class="text-h4 text-weight-bold text-cyan">
+                    <template v-if="loading">
+                      <q-skeleton type="text" width="80px" />
+                    </template>
+                    <template v-else>
+                      {{ stats.totalProducts ?? 0 }}
+                    </template>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <q-avatar size="56px" class="bg-cyan-1 text-cyan">
+                    <q-icon name="inventory_2" size="32px" />
+                  </q-avatar>
+                </div>
+              </div>
+              <q-linear-progress :value="0.7" color="cyan-4" class="q-mt-sm" size="2px" rounded />
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
+      <!-- Best Selling Products -->
+      <div class="row q-mt-lg">
+        <div class="col-12">
+          <q-card class="modern-card">
+            <q-card-section>
+              <div class="row items-center justify-between q-mb-md">
+                <div class="text-h5 text-weight-bold">Produtos Mais Vendidos</div>
+                <div class="row items-center q-gutter-x-md">
+                  <q-btn-toggle
+                    v-model="salesPeriod"
+                    toggle-color="primary"
+                    :options="[
+                      { label: '7 Dias', value: 7 },
+                      { label: '30 Dias', value: 30 },
+                      { label: '90 Dias', value: 90 },
+                      { label: '1 Ano', value: 365 },
+                    ]"
+                    @update:model-value="fetchTopProducts"
+                    flat
+                    rounded
+                    dense
+                    class="bg-grey-2"
+                  />
+                  <q-btn-group flat>
+                    <q-btn
+                      :color="activeTab === 'table' ? 'primary' : 'grey-7'"
+                      icon="table_chart"
+                      @click="activeTab = 'table'"
+                      flat
+                      round
+                    >
+                      <q-tooltip>Visualização em Tabela</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      :color="activeTab === 'chart' ? 'primary' : 'grey-7'"
+                      icon="bar_chart"
+                      @click="activeTab = 'chart'"
+                      flat
+                      round
+                    >
+                      <q-tooltip>Visualização em Gráfico</q-tooltip>
+                    </q-btn>
+                  </q-btn-group>
+                </div>
+              </div>
+
+              <q-separator class="q-mb-md" />
+
+              <q-tab-panels v-model="activeTab" animated>
+                <!-- Table View -->
+                <q-tab-panel name="table" class="q-pa-none">
+                  <q-table
+                    :rows="topProducts"
+                    :columns="topProductsColumns"
+                    row-key="id"
+                    :loading="loading"
+                    loading-label="A carregar..."
+                    :pagination="{
+                      rowsPerPage: 10,
+                      sortBy: 'total_sold',
+                      descending: true,
+                    }"
+                    :filter="topProductsFilter"
+                    @request="onTableRequest"
+                    flat
+                    bordered
+                    class="modern-table"
+                  >
+                    <template v-slot:top-right>
+                      <div class="row items-center q-gutter-sm">
+                        <q-input
+                          v-model="topProductsFilter"
+                          outlined
+                          dense
+                          placeholder="Pesquisar produto..."
+                          class="search-input"
+                        >
+                          <template v-slot:prepend>
+                            <q-icon name="search" />
+                          </template>
+                        </q-input>
+                        <q-btn
+                          color="primary"
+                          icon="refresh"
+                          @click="fetchTopProducts"
+                          :loading="loading"
+                          flat
+                          round
+                        >
+                          <q-tooltip>Atualizar Lista</q-tooltip>
+                        </q-btn>
+                        <q-btn color="secondary" icon="download" @click="exportData" flat round>
+                          <q-tooltip>Exportar Dados</q-tooltip>
+                        </q-btn>
+                      </div>
+                    </template>
+
+                    <!-- Custom Total Sold Cell -->
+                    <template v-slot:body-cell-total_sold="props">
+                      <q-td :props="props">
+                        <div class="row items-center no-wrap">
+                          <div class="col">
+                            <q-linear-progress
+                              :value="props.row.total_sold / maxSold"
+                              color="primary"
+                              class="q-mr-sm"
+                              size="10px"
+                              rounded
+                            />
+                          </div>
+                          <div class="col-auto text-weight-medium">
+                            {{ props.value }}
+                          </div>
+                        </div>
+                      </q-td>
+                    </template>
+                  </q-table>
+                </q-tab-panel>
+
+                <!-- Chart View -->
+                <q-tab-panel name="chart" class="q-pa-none">
+                  <div class="row q-col-gutter-lg">
+                    <div class="col-12 col-md-7">
+                      <q-card flat bordered class="chart-card">
+                        <q-card-section>
+                          <div class="text-h6 text-weight-medium q-mb-md">Top 10 Produtos</div>
+                          <apexchart
+                            type="bar"
+                            height="350"
+                            :options="chartOptions"
+                            :series="chartSeries"
+                          />
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                    <div class="col-12 col-md-5">
+                      <q-card flat bordered class="chart-card">
+                        <q-card-section>
+                          <div class="text-h6 text-weight-medium q-mb-md">
+                            Distribuição por Categoria
+                          </div>
+                          <apexchart
+                            type="pie"
+                            height="350"
+                            :options="pieChartOptions"
+                            :series="pieSeries"
+                          />
+                        </q-card-section>
+                      </q-card>
+                    </div>
+                  </div>
+                </q-tab-panel>
+              </q-tab-panels>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+    </div>
   </q-page>
 </template>
 
@@ -734,113 +780,113 @@ function navigateTo(route) {
   }
   router.push(`/admin/${route}`)
 }*/
+
+const username = 'Administrador' // Você pode tornar isso dinâmico depois
 </script>
 
 <style scoped>
-.q-card {
-  transition: all 0.3s ease;
-  min-height: 140px;
-  display: flex;
-  align-items: center;
-  border-radius: 12px;
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  position: relative;
+.admin-page {
+  background: #f5f7fa;
+  min-height: 100vh;
 }
 
-.q-card:hover {
-  transform: translateY(-4px);
-  box-shadow:
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+.header-section {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  border-radius: 0 0 30px 30px;
+  margin-bottom: -60px;
 }
 
-.q-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #3b82f6, #6366f1);
-}
-
-.q-card-section {
-  width: 100%;
-  padding: 20px;
+.cards-container {
   position: relative;
   z-index: 1;
 }
 
-.stat-icon {
-  position: absolute;
-  right: 20px;
-  bottom: 20px;
-  opacity: 0.1;
-  font-size: 4rem;
-  color: #3b82f6;
-  transition: opacity 0.3s ease;
+.stats-card {
+  border-radius: 16px;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.q-card:hover .stat-icon {
-  opacity: 0.2;
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
-.text-h4 {
-  font-size: 1.5rem;
+.modern-card {
+  border-radius: 16px;
+  background: white;
+}
+
+.modern-table {
+  border-radius: 12px;
+}
+
+.search-input {
+  min-width: 200px;
+}
+
+.chart-card {
+  border-radius: 12px;
+  background: white;
+}
+
+.q-avatar {
+  transition: all 0.3s ease;
+}
+
+.stats-card:hover .q-avatar {
+  transform: scale(1.1);
+}
+
+/* Responsividade */
+@media (max-width: 1023px) {
+  .header-section {
+    border-radius: 0 0 20px 20px;
+    margin-bottom: -40px;
+  }
+}
+
+@media (max-width: 599px) {
+  .header-section {
+    border-radius: 0 0 15px 15px;
+    margin-bottom: -30px;
+  }
+
+  .cards-container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+.sales-value {
+  font-size: 1.8rem;
   line-height: 1.2;
-  margin: 8px 0;
-}
-
-.text-h6 {
-  font-size: 1.1rem;
-  margin-bottom: 8px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 1024px) {
-  .text-h4 {
-    font-size: 1.3rem;
-  }
-
-  .text-h6 {
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .text-h4 {
-    font-size: 1.1rem;
-  }
-
-  .q-card-section {
-    padding: 12px;
-  }
-}
-
-@media (max-width: 480px) {
-  .text-h4 {
-    font-size: 1rem;
-  }
-
-  .text-h6 {
-    font-size: 0.8rem;
-  }
-
-  .q-card-section {
-    padding: 8px;
-  }
-}
-
-/* Truncate long numbers */
-.value-container {
-  max-width: 100%;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 100%;
+}
+
+@media (max-width: 1400px) {
+  .sales-value {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .sales-value {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .sales-value {
+    font-size: 1.2rem;
+  }
+}
+
+/* Para valores muito longos */
+.sales-value:not(.q-skeleton) {
+  font-size: clamp(1rem, 4vw, 1.8rem);
 }
 </style>

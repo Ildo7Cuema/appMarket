@@ -1,25 +1,65 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
-      <q-toolbar>
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
-
-        <q-toolbar-title> AppMarket </q-toolbar-title>
-
-        <div class="q-mr-md">
-          <q-icon name="person" class="q-mr-xs" />
-          {{ user }}
-        </div>
-
-        <q-btn flat round icon="settings" class="q-mr-sm" to="/settings">
-          <q-tooltip>Configurações</q-tooltip>
+    <!-- Navbar -->
+    <q-header elevated class="header-nav">
+      <q-toolbar class="q-px-md">
+        <q-btn
+          flat
+          dense
+          round
+          icon="menu"
+          aria-label="Menu"
+          @click="toggleLeftDrawer"
+          class="q-mr-sm"
+        >
+          <q-tooltip>Menu</q-tooltip>
         </q-btn>
-        <q-btn flat round icon="logout" class="q-mr-sm" @click="logout()">
-          <q-tooltip>Sair</q-tooltip>
-        </q-btn>
+
+        <q-toolbar-title class="row items-center">
+          <img src="~assets/logo.png" alt="AppMarket Logo" class="header-logo q-mr-sm" />
+          <span class="text-weight-bold">AppMarket</span>
+        </q-toolbar-title>
+
+        <!-- Perfil do Usuário -->
+        <q-btn-dropdown flat class="user-profile-btn">
+          <template v-slot:label>
+            <div class="row items-center no-wrap">
+              <q-avatar size="32px" color="primary" text-color="white" class="q-mr-sm">
+                {{ user.charAt(0).toUpperCase() }}
+              </q-avatar>
+              <div class="text-weight-medium">{{ user }}</div>
+            </div>
+          </template>
+
+          <q-list>
+            <q-item clickable v-close-popup to="/profile">
+              <q-item-section avatar>
+                <q-icon name="person" color="primary" />
+              </q-item-section>
+              <q-item-section>Meu Perfil</q-item-section>
+            </q-item>
+
+            <q-item clickable v-close-popup to="/settings">
+              <q-item-section avatar>
+                <q-icon name="settings" color="primary" />
+              </q-item-section>
+              <q-item-section>Configurações</q-item-section>
+            </q-item>
+
+            <q-separator />
+
+            <q-item clickable v-close-popup @click="logout">
+              <q-item-section avatar>
+                <q-icon name="logout" color="negative" />
+              </q-item-section>
+              <q-item-section class="text-negative">Sair</q-item-section>
+            </q-item>
+          </q-list>
+        </q-btn-dropdown>
       </q-toolbar>
     </q-header>
 
+    <!-- Sidebar -->
     <q-drawer
       v-model="leftDrawerOpen"
       show-if-above
@@ -30,31 +70,38 @@
     >
       <q-scroll-area class="fit">
         <q-list class="sidebar-menu">
-          <div class="q-pa-md text-center">
-            <img
-              src="~assets/logo.png"
-              alt="AppMarket Logo"
-              style="max-width: 150px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))"
-              class="q-mb-md"
-            />
+          <!-- Logo e Título -->
+          <div class="sidebar-header q-pa-md">
+            <img src="~assets/logo.png" alt="AppMarket Logo" class="sidebar-logo q-mb-md" />
+            <div class="text-h6 text-weight-bold text-primary">Menu Principal</div>
           </div>
-          <q-item-label header class="text-center text-weight-bold text-grey-8">
-            Menu Principal
-          </q-item-label>
-          <EssentialLink
+
+          <!-- Links do Menu -->
+          <q-item
             v-for="link in linksList"
             :key="link.title"
-            :title="link.title"
-            :caption="link.caption"
-            :link="link.link"
-            :icon="link.icon"
-            :color="link.iconColor"
-          />
+            :to="link.link"
+            clickable
+            v-ripple
+            class="menu-item"
+            :active="isActive(link.link)"
+            @click="leftDrawerOpen = false"
+          >
+            <q-item-section avatar>
+              <q-icon :name="link.icon" :color="link.iconColor" />
+            </q-item-section>
+
+            <q-item-section>
+              <q-item-label class="text-weight-medium">{{ link.title }}</q-item-label>
+              <q-item-label caption class="text-grey-7">{{ link.caption }}</q-item-label>
+            </q-item-section>
+          </q-item>
         </q-list>
       </q-scroll-area>
     </q-drawer>
 
-    <q-page-container class="bg-blue-2">
+    <!-- Conteúdo Principal -->
+    <q-page-container class="bg-grey-2">
       <router-view />
     </q-page-container>
   </q-layout>
@@ -62,22 +109,17 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import EssentialLink from 'components/EssentialLink.vue'
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
 
 // Recuperando o valor armazenado no localStorage
 const storedUser = localStorage.getItem('username')
-
-// Verificando se o valor existe e se é um JSON válido
 const username = storedUser ? localStorage.getItem('username') : 'Convidado'
-
-// Criando o objeto reativo com o nome
 const user = ref(username)
-
 const role = ref(localStorage.getItem('role'))
 
 const allLinks = [
@@ -87,7 +129,7 @@ const allLinks = [
     icon: 'dashboard',
     link: '/',
     roles: ['admin', 'operador de caixa', 'super-admin'],
-    iconColor: 'gree-10', // Cor para o ícone
+    iconColor: 'primary',
   },
   {
     title: 'Meu Perfil',
@@ -95,23 +137,15 @@ const allLinks = [
     icon: 'person',
     link: '/profile',
     roles: ['admin', 'operador de caixa', 'super-admin'],
-    iconColor: 'blue-grey', // Cor para o ícone
+    iconColor: 'blue-grey',
   },
-  /*{
-    title: 'Assinatura',
-    caption: 'Gerenciar assinatura',
-    icon: 'paid',
-    link: '/assinatura',
-    roles: ['admin', 'super-admin'],
-    iconColor: 'green', // Cor para o ícone
-  },*/
   {
     title: 'Admin',
     caption: 'Administração do sistema',
     icon: 'admin_panel_settings',
     link: '/admin',
     roles: ['admin', 'super-admin'],
-    iconColor: 'secondary', // Cor para o ícone
+    iconColor: 'secondary',
   },
   {
     title: 'Funcionários',
@@ -119,7 +153,7 @@ const allLinks = [
     icon: 'groups',
     link: '/employees',
     roles: ['admin', 'super-admin'],
-    iconColor: 'blue', // Cor para o ícone
+    iconColor: 'blue',
   },
   {
     title: 'Categorias',
@@ -127,7 +161,7 @@ const allLinks = [
     icon: 'category',
     link: '/categories',
     roles: ['admin', 'super-admin'],
-    iconColor: 'teal', // Cor para o ícone
+    iconColor: 'teal',
   },
   {
     title: 'Produtos e Stock',
@@ -135,7 +169,7 @@ const allLinks = [
     icon: 'inventory',
     link: '/products-stock',
     roles: ['admin', 'super-admin'],
-    iconColor: 'green', // Cor para o ícone
+    iconColor: 'green',
   },
   {
     title: 'Vendas',
@@ -143,24 +177,15 @@ const allLinks = [
     icon: 'point_of_sale',
     link: '/sales',
     roles: ['operador de caixa'],
-    iconColor: 'red', // Cor para o ícone
+    iconColor: 'red',
   },
-  /*{
-    title: 'Relatórios',
-    caption: 'Relatórios e estatísticas',
-    icon: 'analytics',
-    link: '/reports',
-    roles: ['admin', 'super-admin'],
-    iconColor: 'orange', // Cor para o ícone
-  },*/
   {
     title: 'Permissões',
     caption: 'Gestão de permissões',
     icon: 'lock',
     link: '/permissions',
     roles: ['super-admin'],
-    color: 'green-8', // Cor para o link
-    iconColor: 'purple', // Cor para o ícone
+    iconColor: 'purple',
   },
   {
     title: 'Status de Ativação',
@@ -168,7 +193,7 @@ const allLinks = [
     icon: 'verified_user',
     link: '/admin/activation-status',
     roles: ['admin', 'super-admin'],
-    iconColor: 'blue', // Cor para o ícone
+    iconColor: 'blue',
   },
 ]
 
@@ -179,49 +204,131 @@ const linksList = computed(() => {
 const leftDrawerOpen = ref(false)
 const showFullLayout = ref(true)
 
+const isActive = (link) => {
+  return route.path === link
+}
+
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 
 function logout() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('role')
-  localStorage.removeItem('user')
-  router.push('/login')
-  $q.notify({
-    type: 'positive',
-    message: 'Logged out successfully',
+  $q.dialog({
+    title: 'Confirmar Saída',
+    message: 'Tem certeza que deseja sair do sistema?',
+    persistent: true,
+    ok: {
+      label: 'Sair',
+      color: 'negative',
+    },
+    cancel: {
+      label: 'Cancelar',
+      flat: true,
+    },
+  }).onOk(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('role')
+    localStorage.removeItem('user')
+    router.push('/login')
+    $q.notify({
+      type: 'positive',
+      message: 'Logout realizado com sucesso',
+      position: 'top',
+      timeout: 2000,
+    })
   })
 }
 </script>
 
 <style lang="scss" scoped>
-.sidebar-drawer {
-  background: linear-gradient(145deg, #ffffff, #f8f9fa);
-  border-right: 1px solid rgba(0, 0, 0, 0.12);
+.header-nav {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  height: 64px;
 
-  .sidebar-menu {
-    padding: 8px;
+  .header-logo {
+    height: 32px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  }
 
-    .q-item__label--header {
-      font-size: 0.875rem;
-      letter-spacing: 0.5px;
-      padding: 16px 0;
+  .user-profile-btn {
+    .q-avatar {
+      background: rgba(255, 255, 255, 0.2);
     }
   }
 }
 
-.q-header {
-  background: linear-gradient(145deg, #6200ea, #7c4dff);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.sidebar-drawer {
+  background: white;
+  border-right: 1px solid rgba(0, 0, 0, 0.12);
 
-  .q-toolbar {
-    min-height: 64px;
+  .sidebar-header {
+    background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+    padding: 24px 16px;
+    color: white;
 
+    .sidebar-logo {
+      height: 48px;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+    }
+  }
+
+  .menu-item {
+    margin: 4px 8px;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: rgba(25, 118, 210, 0.05);
+    }
+
+    &.q-item--active {
+      background: rgba(25, 118, 210, 0.1);
+      color: #1976d2;
+    }
+
+    .q-item__section--avatar {
+      min-width: 40px;
+      padding-right: 12px;
+    }
+
+    .q-item__label {
+      font-size: 0.95rem;
+    }
+
+    .q-item__label--caption {
+      font-size: 0.75rem;
+    }
+  }
+}
+
+// Animações
+.menu-item {
+  transform-origin: left;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Responsividade
+@media (max-width: 599px) {
+  .header-nav {
     .q-toolbar__title {
-      font-size: 1.25rem;
-      font-weight: 500;
-      letter-spacing: 0.5px;
+      font-size: 1rem;
+    }
+  }
+
+  .sidebar-drawer {
+    .sidebar-header {
+      padding: 16px;
     }
   }
 }

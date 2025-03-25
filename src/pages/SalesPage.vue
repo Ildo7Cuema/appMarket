@@ -1,173 +1,255 @@
 <template>
-  <q-page padding>
-    <!-- Header Section -->
-    <div class="row q-mb-md items-center">
-      <div class="col">
-        <div class="text-h5 text-weight-bold text-blue-7">Ponto de Venda ( PDV )</div>
-      </div>
-
-      <div class="col text-right">
-        <div class="text-h6 text-weight-bold text-green-7">
-          <span class="text-blue-7">Sua venda diária:</span>
-          {{ formatCurrency(dailySales) }}
+  <q-page class="sales-page">
+    <!-- Header com Gradiente -->
+    <div class="header-section q-px-lg q-pt-lg q-pb-xl">
+      <div class="row items-center justify-between">
+        <div class="col-12 col-md-8">
+          <div class="text-h4 text-weight-bold text-white">Ponto de Venda (PDV)</div>
+          <div class="text-subtitle1 text-grey-3 q-mt-sm">Realize vendas e gerencie transações</div>
+        </div>
+        <div class="col-12 col-md-4">
+          <q-card class="sales-summary-card">
+            <q-card-section>
+              <div class="row items-center q-mb-sm">
+                <q-icon name="trending_up" size="24px" color="positive" class="q-mr-sm" />
+                <div class="text-h6 text-weight-bold">Vendas Diárias</div>
+              </div>
+              <div class="text-h4 text-weight-bold text-positive">
+                {{ formatCurrency(dailySales) }}
+              </div>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="row q-col-gutter-lg">
-      <!-- Products List -->
-      <div class="col-8">
-        <q-card flat class="q-pa-md">
-          <div class="row items-center q-mb-md">
-            <div class="col">
-              <q-input
-                v-model="searchQuery"
-                outlined
-                dense
-                placeholder="Pesquisar produtos..."
-                clearable
-              >
-                <template v-slot:prepend>
-                  <q-icon name="search" />
-                </template>
-              </q-input>
-            </div>
-            <div class="col-auto">
-              <q-btn
-                flat
-                round
-                color="primary"
-                icon="filter_list"
-                @click="showFilters = !showFilters"
-              />
-            </div>
-          </div>
-
-          <q-scroll-area style="height: 500px">
-            <q-table
-              :rows="filteredProducts"
-              :columns="productColumns"
-              row-key="id"
-              flat
-              bordered
-              :filter="searchQuery"
-              :pagination="{ rowsPerPage: 10 }"
-              class="gradient-table"
-              @row-click="(evt, row) => addToCart(row)"
-            >
-              <template v-slot:body-cell-image="props">
-                <q-td :props="props">
-                  <q-img
-                    :src="props.row.image || 'placeholder.jpg'"
-                    :ratio="16 / 9"
-                    width="100px"
-                    class="rounded-borders"
-                  />
-                </q-td>
-              </template>
-            </q-table>
-          </q-scroll-area>
-        </q-card>
-      </div>
-
-      <!-- Shopping Cart -->
-      <div class="col-4">
-        <q-card flat class="q-pa-md">
-          <div class="text-h6 q-mb-md">
-            <q-icon class="" name="shopping_cart"></q-icon> Carrinho de compra
-          </div>
-
-          <q-list bordered separator>
-            <q-item v-for="(item, index) in cart" :key="index" class="q-pa-none">
-              <q-item-section>
-                <q-item-label>{{ item.name }}</q-item-label>
-                <q-item-label caption>
-                  {{ item.quantity }} x {{ formatCurrency(item.price_with_tax ?? item.price) }}
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side>
-                <div class="text-h6">
-                  {{ formatCurrency(item.quantity * (item.price_with_tax ?? item.price)) }}
+    <div class="content-container q-px-lg q-mt-xl">
+      <div class="row q-col-gutter-lg">
+        <!-- Lista de Produtos -->
+        <div class="col-12 col-md-8">
+          <q-card class="products-card">
+            <q-card-section>
+              <div class="row items-center q-mb-md">
+                <div class="col">
+                  <q-input
+                    v-model="searchQuery"
+                    outlined
+                    dense
+                    placeholder="Pesquisar produtos..."
+                    clearable
+                    class="search-input"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="search" color="primary" />
+                    </template>
+                    <template v-slot:append>
+                      <q-icon
+                        v-if="searchQuery"
+                        name="close"
+                        class="cursor-pointer"
+                        @click="searchQuery = ''"
+                      />
+                    </template>
+                  </q-input>
                 </div>
-              </q-item-section>
-
-              <q-item-section side>
-                <q-btn flat round color="negative" icon="remove" @click="removeFromCart(index)" />
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <q-separator class="q-my-md" />
-
-          <div class="row q-col-gutter-md">
-            <div class="col-6">
-              <q-select
-                v-model="paymentMethod"
-                :options="paymentMethods"
-                label="Método de Pagamento"
-                outlined
-                dense
-              />
-            </div>
-            <div class="col-6">
-              <q-input
-                v-model.number="amountReceived"
-                type="number"
-                label="Valor Recebido"
-                outlined
-                dense
-              />
-            </div>
-          </div>
-
-          <div class="q-mt-md">
-            <div class="row q-col-gutter-md">
-              <div class="col-6 text-subtitle1">Total:</div>
-              <div class="col-6 text-right text-h6 text-green-8">
-                {{ formatCurrency(totalAmount) }}
+                <div class="col-auto">
+                  <q-btn
+                    flat
+                    round
+                    color="primary"
+                    icon="filter_list"
+                    @click="showFilters = !showFilters"
+                  >
+                    <q-tooltip>Filtros</q-tooltip>
+                  </q-btn>
+                </div>
               </div>
-            </div>
 
-            <div class="row q-col-gutter-md">
-              <div class="col-6 text-subtitle1">Troco:</div>
-              <div class="col-6 text-right text-h6 text-red-5">
-                {{ formatCurrency(Math.max(0, changeAmount)) }}
+              <q-scroll-area style="height: 500px">
+                <q-table
+                  :rows="filteredProducts"
+                  :columns="productColumns"
+                  row-key="id"
+                  flat
+                  bordered
+                  :filter="searchQuery"
+                  :pagination="{ rowsPerPage: 10 }"
+                  class="modern-table"
+                  @row-click="(evt, row) => addToCart(row)"
+                >
+                  <template v-slot:body-cell-image="props">
+                    <q-td :props="props">
+                      <q-img
+                        :src="props.row.image || 'placeholder.jpg'"
+                        :ratio="16 / 9"
+                        width="100px"
+                        class="product-image"
+                      >
+                        <template v-slot:error>
+                          <div class="absolute-full flex flex-center bg-grey-3 text-grey-7">
+                            <q-icon name="image" size="24px" />
+                          </div>
+                        </template>
+                      </q-img>
+                    </q-td>
+                  </template>
+
+                  <template v-slot:body-cell-price="props">
+                    <q-td :props="props">
+                      <div class="text-weight-bold text-primary">
+                        {{ formatCurrency(props.row.price_with_tax ?? props.row.price) }}
+                      </div>
+                    </q-td>
+                  </template>
+
+                  <template v-slot:body-cell-quantity="props">
+                    <q-td :props="props">
+                      <q-chip
+                        :color="props.row.quantity <= 5 ? 'warning' : 'positive'"
+                        text-color="white"
+                        dense
+                      >
+                        {{ props.row.quantity }}
+                      </q-chip>
+                    </q-td>
+                  </template>
+                </q-table>
+              </q-scroll-area>
+            </q-card-section>
+          </q-card>
+        </div>
+
+        <!-- Carrinho de Compras -->
+        <div class="col-12 col-md-4">
+          <q-card class="cart-card">
+            <q-card-section>
+              <div class="row items-center q-mb-md">
+                <q-icon name="shopping_cart" size="24px" color="primary" class="q-mr-sm" />
+                <div class="text-h6 text-weight-bold">Carrinho de Compras</div>
               </div>
-            </div>
-          </div>
 
-          <q-btn
-            color="primary"
-            class="full-width q-mt-md"
-            label="Finalizar Venda"
-            :disable="cart.length === 0"
-            @click="processSale"
-          />
-        </q-card>
+              <q-scroll-area style="height: 400px">
+                <q-list bordered separator>
+                  <q-item v-for="(item, index) in cart" :key="index" class="cart-item">
+                    <q-item-section>
+                      <q-item-label class="text-weight-medium">{{ item.name }}</q-item-label>
+                      <q-item-label caption>
+                        {{ item.quantity }} x
+                        {{ formatCurrency(item.price_with_tax ?? item.price) }}
+                      </q-item-label>
+                    </q-item-section>
+
+                    <q-item-section side>
+                      <div class="text-h6 text-weight-bold text-primary">
+                        {{ formatCurrency(item.quantity * (item.price_with_tax ?? item.price)) }}
+                      </div>
+                    </q-item-section>
+
+                    <q-item-section side>
+                      <q-btn
+                        flat
+                        round
+                        color="negative"
+                        icon="remove"
+                        @click="removeFromCart(index)"
+                      >
+                        <q-tooltip>Remover item</q-tooltip>
+                      </q-btn>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-scroll-area>
+
+              <q-separator class="q-my-md" />
+
+              <!-- Método de Pagamento -->
+              <div class="row q-col-gutter-md">
+                <div class="col-12">
+                  <q-select
+                    v-model="paymentMethod"
+                    :options="paymentMethods"
+                    label="Método de Pagamento"
+                    outlined
+                    dense
+                    class="payment-select"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="payment" color="primary" />
+                    </template>
+                  </q-select>
+                </div>
+                <div class="col-12">
+                  <q-input
+                    v-model.number="amountReceived"
+                    type="number"
+                    label="Valor Recebido"
+                    outlined
+                    dense
+                    class="amount-input"
+                    :disable="paymentMethod !== 'Dinheiro'"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="attach_money" color="primary" />
+                    </template>
+                  </q-input>
+                </div>
+              </div>
+
+              <!-- Totais -->
+              <div class="totals-section q-mt-md">
+                <div class="row q-col-gutter-md">
+                  <div class="col-6 text-subtitle1">Total:</div>
+                  <div class="col-6 text-right text-h6 text-weight-bold text-positive">
+                    {{ formatCurrency(totalAmount) }}
+                  </div>
+                </div>
+
+                <div class="row q-col-gutter-md">
+                  <div class="col-6 text-subtitle1">Troco:</div>
+                  <div
+                    class="col-6 text-right text-h6 text-weight-bold"
+                    :class="changeAmount >= 0 ? 'text-positive' : 'text-negative'"
+                  >
+                    {{ formatCurrency(Math.max(0, changeAmount)) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botão Finalizar -->
+              <q-btn
+                color="primary"
+                class="full-width q-mt-md"
+                label="Finalizar Venda"
+                :disable="cart.length === 0"
+                @click="processSale"
+                :loading="processingSale"
+              >
+                <template v-slot:loading>
+                  <q-spinner-facebook />
+                </template>
+              </q-btn>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
     </div>
 
-    <!-- Sale Details Dialog -->
-    <q-dialog v-model="showDetailsDialog">
-      <q-card style="min-width: 800px">
-        <q-card-section>
+    <!-- Diálogo de Detalhes da Venda -->
+    <q-dialog v-model="showDetailsDialog" maximized>
+      <q-card class="sale-details-card">
+        <q-card-section class="row items-center">
           <div class="text-h6">Detalhes da Venda</div>
         </q-card-section>
 
         <q-card-section>
-          <div class="row q-col-gutter-md">
-            <div class="col-12">
-              <q-table
-                :rows="selectedSale.items"
-                :columns="saleDetailColumns"
-                row-key="id"
-                flat
-                bordered
-              />
-            </div>
-          </div>
+          <q-table
+            :rows="selectedSale.items"
+            :columns="saleDetailColumns"
+            row-key="id"
+            flat
+            bordered
+            class="modern-table"
+          />
         </q-card-section>
 
         <q-card-actions align="right">
@@ -201,6 +283,7 @@ export default {
     const amountReceived = ref(0)
     const showDetailsDialog = ref(false)
     const selectedSale = ref({})
+    const processingSale = ref(false)
 
     const paymentMethods = [
       'Dinheiro',
@@ -455,6 +538,7 @@ export default {
           totalAmount: totalAmount.value,
         }
 
+        processingSale.value = true
         await salesStore.createSale(saleData)
 
         $q.notify({
@@ -475,6 +559,8 @@ export default {
           actions: [{ icon: 'close', color: 'white' }],
         })
         console.error('Sales Error:', error || 'Unknown error')
+      } finally {
+        processingSale.value = false
       }
     }
 
@@ -530,22 +616,63 @@ export default {
       showSaleDetails,
       productColumns,
       dailySales,
+      processingSale,
     }
   },
 }
 </script>
 
 <style lang="scss" scoped>
-.q-card {
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+.sales-page {
+  background: #f5f7fa;
+  min-height: 100vh;
 }
 
-.gradient-table {
-  background: linear-gradient(145deg, #ffffff 0%, #f5f7fa 100%);
+.header-section {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  border-radius: 0 0 30px 30px;
+  margin-bottom: -60px;
+  padding-bottom: 100px;
+}
 
+.content-container {
+  position: relative;
+  z-index: 1;
+}
+
+.sales-summary-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.products-card,
+.cart-card {
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.search-input {
+  .q-field__control {
+    border-radius: 8px;
+  }
+}
+
+.modern-table {
   .q-table__top {
-    background: linear-gradient(145deg, #6a11cb 0%, #2575fc 100%);
+    background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
     color: white;
     border-radius: 8px 8px 0 0;
   }
@@ -556,8 +683,13 @@ export default {
     color: #2c3e50;
   }
 
-  .q-table__tbody tr:hover {
-    background-color: rgba(245, 247, 250, 0.7);
+  .q-table__tbody tr {
+    transition: all 0.3s ease;
+
+    &:hover {
+      background-color: rgba(25, 118, 210, 0.05);
+      cursor: pointer;
+    }
   }
 
   .q-table__bottom {
@@ -566,12 +698,69 @@ export default {
   }
 }
 
-.q-img {
-  border-radius: 8px 8px 0 0;
+.product-image {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.q-list {
-  max-height: 400px;
-  overflow-y: auto;
+.cart-item {
+  transition: all 0.3s ease;
+
+  &:hover {
+    background-color: rgba(25, 118, 210, 0.05);
+  }
+}
+
+.payment-select,
+.amount-input {
+  .q-field__control {
+    border-radius: 8px;
+  }
+}
+
+.totals-section {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.sale-details-card {
+  border-radius: 12px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+// Animações
+.cart-item {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsividade
+@media (max-width: 599px) {
+  .header-section {
+    border-radius: 0 0 20px 20px;
+    margin-bottom: -40px;
+    padding-bottom: 80px;
+  }
+
+  .content-container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .sales-summary-card {
+    margin-top: 16px;
+  }
 }
 </style>

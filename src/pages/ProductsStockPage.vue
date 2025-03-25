@@ -1,510 +1,660 @@
 <template>
-  <q-page padding>
-    <div class="row q-mb-md q-pa-sm">
-      <div class="col-6">
-        <q-input
-          dense
-          v-model="searchTerm"
-          label="Pesquisar (nome, código ou categoria)"
-          debounce="500"
-          clearable
-        />
-      </div>
-      <div class="col-6 text-right">
-        <q-btn
-          outline
-          color="primary"
-          icon="add"
-          label="Adicionar Produto"
-          @click="newProducts()"
-          no-caps
-        />
-      </div>
-    </div>
-    <div class="row q-mb-md q-pa-sm q-gutter-sm">
-      <!-- Chips de Filtros Ativos -->
-      <div class="col-12 q-mb-sm">
-        <q-chip v-if="searchTerm" dense removable @remove="searchTerm = ''" color="primary">
-          Pesquisa: {{ searchTerm }}
-        </q-chip>
-
-        <q-chip
-          v-if="activeFilters.category"
-          dense
-          removable
-          @remove="activeFilters.category = null"
-          color="primary"
-        >
-          Categoria: {{ categories.find((c) => c.id === activeFilters.category)?.name }}
-        </q-chip>
-
-        <q-chip
-          v-if="activeFilters.minPrice"
-          dense
-          removable
-          @remove="activeFilters.minPrice = null"
-          color="primary"
-        >
-          Preço Mín: Kz {{ activeFilters.minPrice.toLocaleString() }}
-        </q-chip>
-
-        <q-chip
-          v-if="activeFilters.maxPrice"
-          dense
-          removable
-          @remove="activeFilters.maxPrice = null"
-          color="primary"
-        >
-          Preço Máx: Kz {{ activeFilters.maxPrice.toLocaleString() }}
-        </q-chip>
-
-        <q-chip
-          v-if="activeFilters.minStock"
-          dense
-          removable
-          @remove="activeFilters.minStock = null"
-          color="primary"
-        >
-          Estoque Mín: {{ activeFilters.minStock }}
-        </q-chip>
-
-        <q-chip
-          v-if="activeFilters.maxStock"
-          dense
-          removable
-          @remove="activeFilters.maxStock = null"
-          color="primary"
-        >
-          Estoque Máx: {{ activeFilters.maxStock }}
-        </q-chip>
-
-        <q-chip
-          v-if="activeFilters.showLowStock"
-          dense
-          removable
-          @remove="activeFilters.showLowStock = false"
-          color="primary"
-        >
-          Baixo Estoque
-        </q-chip>
-
-        <q-chip
-          v-if="activeFilters.showOutOfStock"
-          dense
-          removable
-          @remove="activeFilters.showOutOfStock = false"
-          color="primary"
-        >
-          Sem Estoque
-        </q-chip>
-      </div>
-      <q-select
-        dense
-        v-model="activeFilters.category"
-        :options="categories"
-        option-label="name"
-        option-value="id"
-        label="Categoria"
-        emit-value
-        map-options
-        clearable
-        style="min-width: 200px"
-      />
-
-      <q-input
-        dense
-        v-model.number="activeFilters.minPrice"
-        label="Preço Mínimo"
-        type="number"
-        prefix="Kz"
-        clearable
-        style="max-width: 150px"
-      />
-
-      <q-input
-        dense
-        v-model.number="activeFilters.maxPrice"
-        label="Preço Máximo"
-        type="number"
-        prefix="Kz"
-        clearable
-        style="max-width: 150px"
-      />
-
-      <q-input
-        dense
-        v-model.number="activeFilters.minStock"
-        label="Estoque Mínimo"
-        type="number"
-        clearable
-        style="max-width: 150px"
-      />
-
-      <q-input
-        dense
-        v-model.number="activeFilters.maxStock"
-        label="Estoque Máximo"
-        type="number"
-        clearable
-        style="max-width: 150px"
-      />
-
-      <q-toggle v-model="activeFilters.showLowStock" label="Baixo Estoque" />
-
-      <q-toggle v-model="activeFilters.showOutOfStock" label="Sem Estoque" />
-
-      <q-select
-        dense
-        v-model="sortOptions.field"
-        :options="[
-          { label: 'Nome', value: 'name' },
-          { label: 'Preço', value: 'price' },
-          { label: 'Estoque', value: 'stock' },
-          { label: 'Código', value: 'code' },
-        ]"
-        label="Ordenar por"
-        emit-value
-        map-options
-        style="min-width: 150px"
-      />
-
-      <q-btn-toggle
-        v-model="sortOptions.order"
-        :options="[
-          { label: 'Asc', value: 'asc' },
-          { label: 'Desc', value: 'desc' },
-        ]"
-        dense
-      />
-    </div>
-
-    <div class="row q-col-gutter-md">
-      <!-- View Toggle -->
-      <div class="col-12">
-        <q-btn-toggle
-          v-model="viewMode"
-          :options="[
-            { label: 'Tabela', value: 'table', icon: 'table_chart' },
-            { label: 'Cards', value: 'cards', icon: 'grid_view' },
-          ]"
-          spread
-          class="q-mb-md"
-        />
-      </div>
-
-      <!-- Table View -->
-      <div class="col-12" v-if="viewMode === 'table'">
-        <q-table
-          dense
-          title="Gestão de Produtos e Stock"
-          :rows="products"
-          :columns="columns"
-          row-key="id"
-          :loading="loading"
-          :pagination="productPagination"
-          :rows-per-page-options="[10, 20, 50, 100]"
-          selection="multiple"
-          :filter="filter"
-          flat
-          bordered
-          separator="cell"
-          v-model:selected="selectedProducts"
-        >
-          <template v-slot:top-right>
-            <q-btn
-              v-if="selectedProducts.length > 0"
-              color="negative"
-              icon="delete"
-              label="Eliminar Selecionados"
-              @click="confirmBulkDelete"
-              no-caps
-              dense
-              class="q-mr-sm"
-            />
-            <q-btn flat color="green" icon="download" @click="exportProducts" no-caps dense />
-          </template>
-          <!-- Custom Loading State -->
-          <template v-slot:loading>
-            <q-inner-loading showing color="primary">
-              <q-spinner-gears size="50px" color="primary" />
-              <div class="q-mt-sm">Carregando produtos...</div>
-            </q-inner-loading>
-          </template>
-
-          <!-- Custom Stock Cell -->
-          <template v-slot:body-cell-quantity="props">
-            <q-td :props="props">
-              <q-linear-progress
-                :value="props.row.quantity / (props.row.max_stock || 100)"
-                :color="
-                  props.row.quantity <= 5
-                    ? 'negative'
-                    : props.row.quantity <= 20
-                      ? 'warning'
-                      : 'positive'
-                "
-                size="25px"
-                class="q-mt-sm"
-              >
-                <div class="absolute-full flex flex-center">
-                  <q-badge color="white" text-color="primary">
-                    {{ props.row.quantity || 0 }} / {{ props.row.max_stock || 100 }}
-                  </q-badge>
-                </div>
-              </q-linear-progress>
-            </q-td>
-          </template>
-
-          <!-- Custom Image Cell -->
-          <template v-slot:body-cell-image_url="props">
-            <q-td :props="props">
-              <q-img
-                v-if="props.row.image_url"
-                :src="getImageUrl(props.row.image_url)"
-                spinner-color="primary"
-                style="height: 50px; max-width: 50px"
-                fit="contain"
-                @error="handleImageError"
-              >
-                <template v-slot:error>
-                  <div class="absolute-full flex flex-center bg-negative text-white">
-                    Erro ao carregar imagem
-                  </div>
-                </template>
-              </q-img>
-              <q-img
-                v-else
-                :src="DEFAULT_IMAGE_URL"
-                style="height: 50px; max-width: 50px"
-                fit="contain"
-              />
-            </q-td>
-          </template>
-
-          <!-- Custom Price Cell -->
-          <template v-slot:body-cell-price="props">
-            <q-td :props="props">
-              <div class="text-right">
-                <div class="text-weight-bold">
-                  Kz {{ Number(props.row.price).toLocaleString() }}
-                </div>
-                <div v-if="props.row.price_with_tax" class="text-caption text-grey-8">
-                  Com IVA: Kz {{ Number(props.row.price_with_tax).toLocaleString() }}
-                </div>
-              </div>
-            </q-td>
-          </template>
-
-          <!-- Custom Actions -->
-          <template v-slot:body-cell-actions="props">
-            <q-td :props="props">
-              <q-btn flat round color="primary" icon="edit" @click="editProduct(props.row)">
-                <q-tooltip>Editar</q-tooltip>
-              </q-btn>
-              <q-btn flat round color="negative" icon="delete" @click="confirmDelete(props.row)">
-                <q-tooltip>Eliminar</q-tooltip>
-              </q-btn>
-            </q-td>
-          </template>
-        </q-table>
-      </div>
-
-      <!-- Card View -->
-      <div class="col-12" v-if="viewMode === 'cards'">
-        <div class="row q-col-gutter-md">
-          <div
-            class="col-12 col-sm-6 col-md-4 col-lg-3"
-            v-for="product in products"
-            :key="product.id"
-          >
-            <q-card class="my-card">
-              <q-img
-                :src="getImageUrl(product.image_url)"
-                :ratio="16 / 9"
-                class="cursor-pointer"
-                @click="editProduct(product)"
-                loading="eager"
-                @error="handleImageError"
-              >
-                <template v-slot:error>
-                  <div class="absolute-full flex flex-center bg-negative text-white">
-                    Erro ao carregar imagem
-                  </div>
-                </template>
-                <q-badge
-                  floating
-                  :color="
-                    product.quantity <= 5
-                      ? 'negative'
-                      : product.quantity <= 20
-                        ? 'warning'
-                        : 'positive'
-                  "
-                >
-                  {{ product.quantity || 0 }} em estoque
-                </q-badge>
-              </q-img>
-
-              <q-card-section>
-                <div class="text-h6">{{ product.name }}</div>
-                <div class="text-subtitle2">{{ product.code }}</div>
-                <div class="text-caption text-grey-8 q-mt-sm">
-                  {{ product.description || 'Sem descrição' }}
-                </div>
-              </q-card-section>
-
-              <q-card-section class="q-pt-none">
-                <div class="text-h6 text-primary">
-                  Kz {{ Number(product.price).toLocaleString() }}
-                  <div v-if="product.price_with_tax" class="text-caption text-grey-8">
-                    Com IVA: Kz {{ Number(product.price_with_tax).toLocaleString() }}
-                  </div>
-                </div>
-                <div class="text-caption">
-                  Categoria: {{ product.category_name || 'Sem categoria' }}
-                </div>
-              </q-card-section>
-
-              <q-card-actions align="right">
-                <q-btn flat round color="primary" icon="edit" @click="editProduct(product)" />
-                <q-btn flat round color="negative" icon="delete" @click="confirmDelete(product)" />
-              </q-card-actions>
-            </q-card>
+  <q-page class="products-page">
+    <!-- Header com gradiente -->
+    <div class="header-section q-px-lg q-pt-lg q-pb-xl">
+      <div class="row items-center justify-between">
+        <div class="col-12 col-md-8">
+          <div class="text-h4 text-weight-bold text-white">Gestão de Produtos</div>
+          <div class="text-subtitle1 text-grey-3 q-mt-sm">
+            Gerencie o estoque e cadastro de produtos do sistema
           </div>
+        </div>
+        <div class="col-12 col-md-4 text-right">
+          <q-btn
+            outline
+            class="bg-white text-primary"
+            icon="add"
+            label="Novo Produto"
+            @click="newProducts()"
+            no-caps
+          >
+            <q-tooltip>Adicionar novo produto ao estoque</q-tooltip>
+          </q-btn>
         </div>
       </div>
     </div>
 
-    <!-- Product Dialog -->
-    <q-dialog v-model="showProductDialog">
-      <q-card style="min-width: 400px">
-        <q-card-section class="text-center">
-          <q-icon name="inventory" color="green" size="md"></q-icon>
-          <div class="text-small text-grey-8">{{ isEditing ? 'Editar' : 'Adicionar' }} Produto</div>
+    <div class="content-container q-px-lg q-mt-xl">
+      <!-- Card de Pesquisa e Filtros -->
+      <q-card class="filter-card q-mb-md">
+        <q-card-section>
+          <div class="row q-col-gutter-md">
+            <!-- Pesquisa -->
+            <div class="col-12 col-md-6">
+              <q-input
+                v-model="searchTerm"
+                dense
+                outlined
+                label="Pesquisar produtos"
+                placeholder="Nome, código ou categoria"
+                debounce="500"
+                clearable
+                class="search-input"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="search" color="primary" />
+                </template>
+                <template v-slot:append v-if="searchTerm">
+                  <q-icon name="clear" class="cursor-pointer" @click="searchTerm = ''" />
+                </template>
+              </q-input>
+            </div>
+
+            <!-- Categoria -->
+            <div class="col-12 col-md-3">
+              <q-select
+                dense
+                outlined
+                v-model="activeFilters.category"
+                :options="categories"
+                option-label="name"
+                option-value="id"
+                label="Categoria"
+                emit-value
+                map-options
+                clearable
+                class="filter-select"
+              >
+                <template v-slot:prepend>
+                  <q-icon name="category" color="primary" />
+                </template>
+              </q-select>
+            </div>
+
+            <!-- Ordenação -->
+            <div class="col-12 col-md-3">
+              <div class="row q-col-gutter-sm">
+                <div class="col">
+                  <q-select
+                    dense
+                    outlined
+                    v-model="sortOptions.field"
+                    :options="[
+                      { label: 'Nome', value: 'name' },
+                      { label: 'Preço', value: 'price' },
+                      { label: 'Estoque', value: 'stock' },
+                      { label: 'Código', value: 'code' },
+                    ]"
+                    label="Ordenar por"
+                    emit-value
+                    map-options
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="sort" color="primary" />
+                    </template>
+                  </q-select>
+                </div>
+                <div class="col-auto">
+                  <q-btn-toggle
+                    v-model="sortOptions.order"
+                    :options="[
+                      { label: 'Asc', value: 'asc', icon: 'arrow_upward' },
+                      { label: 'Desc', value: 'desc', icon: 'arrow_downward' },
+                    ]"
+                    dense
+                    outline
+                    class="full-height"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filtros Avançados -->
+          <div class="row q-col-gutter-md q-mt-md">
+            <div class="col-12 col-md-3">
+              <q-input
+                dense
+                outlined
+                v-model.number="activeFilters.minPrice"
+                label="Preço Mínimo"
+                type="number"
+                prefix="Kz"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="payments" color="primary" />
+                </template>
+              </q-input>
+            </div>
+
+            <div class="col-12 col-md-3">
+              <q-input
+                dense
+                outlined
+                v-model.number="activeFilters.maxPrice"
+                label="Preço Máximo"
+                type="number"
+                prefix="Kz"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="payments" color="primary" />
+                </template>
+              </q-input>
+            </div>
+
+            <div class="col-12 col-md-3">
+              <q-input
+                dense
+                outlined
+                v-model.number="activeFilters.minStock"
+                label="Estoque Mínimo"
+                type="number"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="inventory" color="primary" />
+                </template>
+              </q-input>
+            </div>
+
+            <div class="col-12 col-md-3">
+              <q-input
+                dense
+                outlined
+                v-model.number="activeFilters.maxStock"
+                label="Estoque Máximo"
+                type="number"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <q-icon name="inventory" color="primary" />
+                </template>
+              </q-input>
+            </div>
+          </div>
+
+          <!-- Toggles e Chips -->
+          <div class="row q-col-gutter-md q-mt-md items-center">
+            <div class="col-auto">
+              <q-toggle
+                v-model="activeFilters.showLowStock"
+                label="Baixo Estoque"
+                color="warning"
+                icon="warning"
+              />
+            </div>
+
+            <div class="col-auto">
+              <q-toggle
+                v-model="activeFilters.showOutOfStock"
+                label="Sem Estoque"
+                color="negative"
+                icon="error"
+              />
+            </div>
+
+            <!-- Chips de Filtros Ativos -->
+            <div class="col-12 q-mt-sm">
+              <q-chip
+                v-for="(filter, index) in activeFilterChips"
+                :key="index"
+                dense
+                removable
+                @remove="removeFilter(filter.type)"
+                :color="filter.color || 'primary'"
+                class="q-ma-xs"
+              >
+                {{ filter.label }}
+              </q-chip>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <!-- Card Principal -->
+      <q-card class="main-card">
+        <q-card-section class="q-pa-none">
+          <!-- View Toggle -->
+          <div class="row items-center justify-between q-pa-md">
+            <div class="col-auto">
+              <div class="text-h6 text-weight-bold text-primary">Lista de Produtos</div>
+              <div class="text-caption text-grey-7">{{ products.length }} produtos encontrados</div>
+            </div>
+            <div class="col-auto">
+              <q-btn-group outline>
+                <q-btn
+                  :color="viewMode === 'table' ? 'primary' : 'grey'"
+                  icon="table_chart"
+                  @click="viewMode = 'table'"
+                >
+                  <q-tooltip>Visualização em Tabela</q-tooltip>
+                </q-btn>
+                <q-btn
+                  :color="viewMode === 'cards' ? 'primary' : 'grey'"
+                  icon="grid_view"
+                  @click="viewMode = 'cards'"
+                >
+                  <q-tooltip>Visualização em Cards</q-tooltip>
+                </q-btn>
+              </q-btn-group>
+              <q-btn
+                flat
+                round
+                color="primary"
+                icon="download"
+                @click="exportProducts"
+                class="q-ml-sm"
+              >
+                <q-tooltip>Exportar Produtos</q-tooltip>
+              </q-btn>
+            </div>
+          </div>
+
+          <!-- Table View -->
+          <div v-if="viewMode === 'table'">
+            <div class="row q-mb-md q-px-md">
+              <q-btn
+                v-if="selectedProducts.length > 0"
+                color="negative"
+                icon="delete"
+                :label="`Excluir ${selectedProducts.length} Selecionados`"
+                @click="confirmBulkDelete"
+                class="q-mr-sm"
+              />
+            </div>
+            <q-table
+              :rows="products"
+              :columns="columns"
+              row-key="id"
+              :loading="loading"
+              :pagination="productPagination"
+              :rows-per-page-options="[10, 20, 50, 100]"
+              selection="multiple"
+              v-model:selected="selectedProducts"
+              flat
+              bordered
+              separator="cell"
+              class="modern-table"
+            >
+              <!-- Loading State -->
+              <template v-slot:loading>
+                <q-inner-loading showing color="primary">
+                  <q-spinner-gears size="50px" color="primary" />
+                  <div class="text-primary text-caption q-mt-sm">Carregando produtos...</div>
+                </q-inner-loading>
+              </template>
+
+              <!-- Custom Stock Cell -->
+              <template v-slot:body-cell-quantity="props">
+                <q-td :props="props">
+                  <q-linear-progress
+                    :value="props.row.quantity / (props.row.max_stock || 100)"
+                    :color="getStockColor(props.row.quantity)"
+                    size="25px"
+                    class="q-mt-sm"
+                  >
+                    <div class="absolute-full flex flex-center">
+                      <q-badge color="white" text-color="primary">
+                        {{ props.row.quantity || 0 }} / {{ props.row.max_stock || 100 }}
+                      </q-badge>
+                    </div>
+                  </q-linear-progress>
+                </q-td>
+              </template>
+
+              <!-- Custom Image Cell -->
+              <template v-slot:body-cell-image_url="props">
+                <q-td :props="props" class="text-center">
+                  <q-img
+                    :src="getImageUrl(props.row.image_url)"
+                    spinner-color="primary"
+                    style="height: 50px; max-width: 50px"
+                    fit="contain"
+                    @error="handleImageError"
+                    class="rounded-borders"
+                  >
+                    <template v-slot:error>
+                      <div
+                        class="absolute-full flex flex-center bg-negative text-white text-caption"
+                      >
+                        Erro
+                      </div>
+                    </template>
+                  </q-img>
+                </q-td>
+              </template>
+
+              <!-- Custom Price Cell -->
+              <template v-slot:body-cell-price="props">
+                <q-td :props="props">
+                  <div class="text-right">
+                    <div class="text-weight-bold">
+                      Kz {{ Number(props.row.price).toLocaleString() }}
+                    </div>
+                    <div v-if="props.row.price_with_tax" class="text-caption text-grey-8">
+                      Com IVA: Kz {{ Number(props.row.price_with_tax).toLocaleString() }}
+                    </div>
+                  </div>
+                </q-td>
+              </template>
+
+              <!-- Custom Actions -->
+              <template v-slot:body-cell-actions="props">
+                <q-td :props="props" class="text-center">
+                  <q-btn-group flat>
+                    <q-btn
+                      flat
+                      round
+                      color="primary"
+                      icon="edit"
+                      @click="editProduct(props.row)"
+                      class="q-mx-xs"
+                    >
+                      <q-tooltip>Editar Produto</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      color="negative"
+                      icon="delete"
+                      @click="confirmDelete(props.row)"
+                      class="q-mx-xs"
+                    >
+                      <q-tooltip>Excluir Produto</q-tooltip>
+                    </q-btn>
+                  </q-btn-group>
+                </q-td>
+              </template>
+
+              <!-- No Data Message -->
+              <template v-slot:no-data>
+                <div class="full-width row flex-center q-pa-lg text-grey-7">
+                  <q-icon name="inventory_2" size="40px" color="grey-5" class="q-mb-sm" />
+                  <div class="text-h6">Nenhum produto encontrado</div>
+                  <div class="text-caption">Tente ajustar os filtros de pesquisa</div>
+                </div>
+              </template>
+            </q-table>
+          </div>
+
+          <!-- Card View -->
+          <div v-else class="q-pa-md">
+            <div class="row q-col-gutter-md">
+              <div
+                v-for="product in products"
+                :key="product.id"
+                class="col-12 col-sm-6 col-md-4 col-lg-3"
+              >
+                <q-card class="product-card">
+                  <q-img
+                    :src="getImageUrl(product.image_url)"
+                    :ratio="16 / 9"
+                    class="cursor-pointer"
+                    @click="editProduct(product)"
+                    loading="eager"
+                    @error="handleImageError"
+                  >
+                    <template v-slot:error>
+                      <div class="absolute-full flex flex-center bg-negative text-white">
+                        Erro ao carregar imagem
+                      </div>
+                    </template>
+                    <div class="absolute-top-right q-pa-sm">
+                      <q-badge
+                        :color="getStockColor(product.quantity)"
+                        class="q-px-sm q-py-xs text-weight-bold"
+                      >
+                        {{ product.quantity || 0 }} em estoque
+                      </q-badge>
+                    </div>
+                  </q-img>
+
+                  <q-card-section>
+                    <div class="text-h6 ellipsis-2-lines">{{ product.name }}</div>
+                    <div class="text-subtitle2 text-grey-7">{{ product.code }}</div>
+                    <div class="text-caption text-grey-8 q-mt-sm ellipsis-2-lines">
+                      {{ product.description || 'Sem descrição' }}
+                    </div>
+                  </q-card-section>
+
+                  <q-card-section class="q-pt-none">
+                    <div class="text-h6 text-primary">
+                      Kz {{ Number(product.price).toLocaleString() }}
+                      <div v-if="product.price_with_tax" class="text-caption text-grey-8">
+                        Com IVA: Kz {{ Number(product.price_with_tax).toLocaleString() }}
+                      </div>
+                    </div>
+                    <div class="text-caption q-mt-sm">
+                      Categoria: {{ product.category_name || 'Sem categoria' }}
+                    </div>
+                  </q-card-section>
+
+                  <q-separator />
+
+                  <q-card-actions align="right">
+                    <q-btn flat round color="primary" icon="edit" @click="editProduct(product)">
+                      <q-tooltip>Editar Produto</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      color="negative"
+                      icon="delete"
+                      @click="confirmDelete(product)"
+                    >
+                      <q-tooltip>Excluir Produto</q-tooltip>
+                    </q-btn>
+                  </q-card-actions>
+                </q-card>
+              </div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+    </div>
+
+    <!-- Diálogo de Produto -->
+    <q-dialog v-model="showProductDialog" persistent maximized>
+      <q-card class="dialog-card">
+        <q-card-section class="bg-gradient-primary text-white row items-center">
+          <div class="text-h6">
+            <q-icon name="inventory" class="q-mr-sm" />
+            {{ isEditing ? 'Editar' : 'Novo' }} Produto
+          </div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
         </q-card-section>
 
-        <q-card-section>
-          <q-form @submit="saveProduct">
-            <q-input
-              dense
-              v-model="productForm.code"
-              label="Código do Produto"
-              :rules="[(val) => !!val || 'Campo obrigatório']"
-            />
-            <q-input
-              dense
-              v-model="productForm.name"
-              label="Nome do Produto"
-              :rules="[(val) => !!val || 'Campo obrigatório']"
-              class="q-mt-sm"
-            />
-            <q-input dense v-model="productForm.description" label="Descrição" class="q-mt-sm" />
+        <q-card-section class="q-pa-md scroll" style="max-height: 80vh">
+          <q-form @submit="saveProduct" class="row q-col-gutter-md">
+            <!-- Coluna Esquerda -->
+            <div class="col-12 col-md-8">
+              <div class="row q-col-gutter-md">
+                <!-- Código -->
+                <div class="col-12 col-md-6">
+                  <q-input
+                    outlined
+                    v-model="productForm.code"
+                    label="Código do Produto"
+                    :rules="[(val) => !!val || 'Campo obrigatório']"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="qr_code" color="primary" />
+                    </template>
+                  </q-input>
+                </div>
 
-            <q-input
-              dense
-              v-model="productForm.price"
-              label="Preço"
-              type="number"
-              prefix="Kz"
-              :rules="[(val) => val >= 0 || 'Preço inválido']"
-              class="q-mt-sm"
-            />
-            <div v-if="productForm.is_taxed" class="text-caption text-grey-8 q-mt-xs">
-              Preço com IVA: Kz {{ (productForm.price * 1.14).toLocaleString() }}
+                <!-- Nome -->
+                <div class="col-12 col-md-6">
+                  <q-input
+                    outlined
+                    v-model="productForm.name"
+                    label="Nome do Produto"
+                    :rules="[(val) => !!val || 'Campo obrigatório']"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="inventory_2" color="primary" />
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- Descrição -->
+                <div class="col-12">
+                  <q-input
+                    outlined
+                    v-model="productForm.description"
+                    label="Descrição"
+                    type="textarea"
+                    rows="3"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="description" color="primary" />
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- Preço -->
+                <div class="col-12 col-md-6">
+                  <q-input
+                    outlined
+                    v-model="productForm.price"
+                    label="Preço"
+                    type="number"
+                    prefix="Kz"
+                    :rules="[(val) => val >= 0 || 'Preço inválido']"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="payments" color="primary" />
+                    </template>
+                  </q-input>
+                  <div v-if="productForm.taxable" class="text-caption text-primary q-mt-sm">
+                    Preço com IVA: Kz {{ (productForm.price * 1.14).toLocaleString() }}
+                  </div>
+                </div>
+
+                <!-- Stock -->
+                <div class="col-12 col-md-6">
+                  <q-input
+                    outlined
+                    v-model="productForm.quantity"
+                    label="Stock Inicial"
+                    type="number"
+                    :rules="[(val) => val >= 0 || 'Stock inválido']"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="inventory" color="primary" />
+                    </template>
+                  </q-input>
+                </div>
+
+                <!-- Categoria -->
+                <div class="col-12 col-md-6">
+                  <q-select
+                    outlined
+                    v-model="productForm.category_id"
+                    :options="categories"
+                    option-label="name"
+                    option-value="id"
+                    label="Categoria"
+                    emit-value
+                    map-options
+                    clearable
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="category" color="primary" />
+                    </template>
+                  </q-select>
+                </div>
+
+                <!-- IVA Toggle -->
+                <div class="col-12">
+                  <q-toggle
+                    v-model="productForm.taxable"
+                    label="Produto Tributável (IVA 14%)"
+                    color="primary"
+                    class="q-mt-sm"
+                  />
+                </div>
+              </div>
             </div>
-            <q-input
-              dense
-              v-model="productForm.quantity"
-              label="Stock Inicial"
-              type="number"
-              :rules="[(val) => val >= 0 || 'Stock inválido']"
-              class="q-mt-sm"
-            />
 
-            <q-select
-              dense
-              v-model="productForm.category_id"
-              :options="categories"
-              option-label="name"
-              option-value="id"
-              label="Categoria"
-              emit-value
-              map-options
-              clearable
-              class="q-mt-sm"
-            />
+            <!-- Coluna Direita - Imagem -->
+            <div class="col-12 col-md-4">
+              <q-card class="image-upload-card">
+                <q-card-section>
+                  <div class="text-h6">Imagem do Produto</div>
+                  <div class="text-caption text-grey-7">
+                    Formatos aceitos: JPG, PNG. Tamanho máximo: 45MB
+                  </div>
 
-            <q-file
-              dense
-              v-model="productForm.image"
-              label="Imagem do Produto (Opcional)"
-              accept=".jpg, .png, .jpeg"
-              clearable
-              class="q-mt-sm"
-              max-file-size="47185920"
-              @rejected="onFileRejected"
-              :rules="[
-                (val) => !val || val.size <= 47185920 || 'Tamanho máximo de 45MB',
-                (val) =>
-                  !val || ['image/jpeg', 'image/png'].includes(val.type) || 'Formato inválido',
-              ]"
-            >
-              <template v-slot:prepend>
-                <q-icon name="attach_file" />
-              </template>
-              <template v-slot:after>
-                <q-btn
-                  v-if="productForm.image_url && !productForm.image"
-                  flat
-                  round
-                  dense
-                  color="negative"
-                  icon="delete"
-                  @click="removeImage"
-                >
-                  <q-tooltip>Remover imagem</q-tooltip>
-                </q-btn>
-              </template>
-            </q-file>
+                  <q-file
+                    v-model="productForm.image"
+                    accept=".jpg, .png, .jpeg"
+                    clearable
+                    class="q-mt-sm"
+                    max-file-size="47185920"
+                    @rejected="onFileRejected"
+                    :rules="[
+                      (val) => !val || val.size <= 47185920 || 'Tamanho máximo de 45MB',
+                      (val) =>
+                        !val ||
+                        ['image/jpeg', 'image/png'].includes(val.type) ||
+                        'Formato inválido',
+                    ]"
+                    borderless
+                    style="max-width: 100%"
+                  >
+                    <template v-slot:prepend>
+                      <q-icon name="attach_file" />
+                    </template>
+                  </q-file>
 
-            <!-- Prévia da imagem -->
-            <div v-if="previewImage" class="q-mt-sm">
-              <div class="text-caption q-mb-xs">Prévia da imagem:</div>
-              <q-img
-                :src="previewImage"
-                style="max-width: 100%; max-height: 150px; object-fit: contain"
-                :ratio="4 / 3"
-                class="rounded-borders"
-              />
+                  <!-- Preview da Imagem -->
+                  <div class="image-preview q-mt-md">
+                    <q-img
+                      :src="previewImage || DEFAULT_IMAGE_URL"
+                      style="width: 100%; max-height: 200px"
+                      fit="contain"
+                      class="rounded-borders"
+                    >
+                      <template v-slot:error>
+                        <div class="absolute-full flex flex-center bg-grey-3">
+                          <q-icon name="image" size="48px" color="grey-7" />
+                        </div>
+                      </template>
+                    </q-img>
+                    <q-btn
+                      v-if="productForm.image_url && !productForm.image"
+                      flat
+                      round
+                      dense
+                      color="negative"
+                      icon="delete"
+                      class="absolute-top-right"
+                      @click="removeImage"
+                    >
+                      <q-tooltip>Remover imagem atual</q-tooltip>
+                    </q-btn>
+                  </div>
+                </q-card-section>
+              </q-card>
             </div>
-
-            <q-toggle
-              dense
-              v-model="productForm.taxable"
-              label="Produto Tributável (IVA 14%)"
-              class="q-mt-sm"
-            />
-
-            <q-card-actions align="right" class="q-mt-md">
-              <q-btn
-                outline
-                label="Cancelar"
-                color="grey"
-                no-caps
-                v-close-popup
-                icon="fas fa-close"
-              />
-              <q-btn
-                outline
-                type="submit"
-                label="Guardar"
-                color="green"
-                no-caps
-                icon="fas fa-save"
-              />
-            </q-card-actions>
           </q-form>
         </q-card-section>
+
+        <q-card-actions align="right" class="bg-white q-pa-md">
+          <q-btn outline label="Cancelar" color="grey" v-close-popup icon="close" class="q-mr-sm" />
+          <q-btn
+            unelevated
+            :label="isEditing ? 'Salvar Alterações' : 'Criar Produto'"
+            color="primary"
+            icon="save"
+            @click="saveProduct"
+            :loading="loading"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
   </q-page>
@@ -527,7 +677,6 @@ const loading = ref(false)
 const showProductDialog = ref(false)
 const isEditing = ref(false)
 const categories = ref([])
-const filter = ref('')
 const searchTerm = ref('')
 const selectedProducts = ref([])
 const activeFilters = ref({
@@ -930,6 +1079,13 @@ const previewImage = computed(() => {
   return null
 })
 
+// Função para determinar a cor do indicador de estoque
+function getStockColor(quantity) {
+  if (quantity === 0) return 'negative'
+  if (quantity < 10) return 'warning'
+  return 'positive'
+}
+
 function onFileRejected(rejectedEntries) {
   $q.notify({
     type: 'negative',
@@ -998,7 +1154,150 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.q-tab-panel {
-  padding: 16px 0;
+.products-page {
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+.header-section {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  border-radius: 0 0 30px 30px;
+  margin-bottom: -60px;
+  padding-bottom: 100px;
+}
+
+.content-container {
+  position: relative;
+  z-index: 1;
+}
+
+.filter-card,
+.main-card {
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.filter-card:hover,
+.main-card:hover {
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+}
+
+.search-input,
+.filter-select {
+  transition: all 0.3s ease;
+}
+
+.search-input:focus-within,
+.filter-select:focus-within {
+  transform: translateY(-1px);
+}
+
+.modern-table {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.modern-table :deep(.q-table__top),
+.modern-table :deep(.q-table__bottom) {
+  padding: 12px 16px;
+  background: #f8fafc;
+}
+
+.modern-table :deep(th) {
+  font-weight: 600;
+  color: #1976d2;
+  background: #f8fafc;
+  font-size: 0.813rem;
+  padding: 8px 12px;
+  height: 40px;
+}
+
+.modern-table :deep(td) {
+  padding: 6px 12px;
+  font-size: 0.813rem;
+  height: 36px;
+}
+
+.modern-table :deep(tr) {
+  height: 36px;
+}
+
+.modern-table :deep(.q-table__grid-content) {
+  background: #f8fafc;
+}
+
+.modern-table :deep(.q-table__bottom) {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.modern-table :deep(tbody tr:nth-child(even)) {
+  background: #fafbfc;
+}
+
+.modern-table :deep(tbody tr:hover) {
+  background: #f0f7ff !important;
+}
+
+.product-card {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.image-upload-card {
+  border: 2px dashed #1976d2;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.dialog-card {
+  border-radius: 16px;
+}
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+}
+
+.ellipsis-2-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Responsividade */
+@media (max-width: 599px) {
+  .header-section {
+    border-radius: 0 0 20px 20px;
+    margin-bottom: -40px;
+    padding-bottom: 80px;
+  }
+
+  .content-container {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .modern-table :deep(th),
+  .modern-table :deep(td) {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    height: 32px;
+  }
+
+  .modern-table :deep(tr) {
+    height: 32px;
+  }
+
+  .product-card {
+    margin-bottom: 16px;
+  }
 }
 </style>
