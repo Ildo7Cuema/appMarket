@@ -54,7 +54,11 @@ export default defineConfig((ctx) => {
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf(viteConf) {
+        viteConf.optimizeDeps = viteConf.optimizeDeps || {}
+        viteConf.optimizeDeps.include = viteConf.optimizeDeps.include || []
+        viteConf.optimizeDeps.include.push('jspdf', 'html2canvas')
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [
@@ -109,7 +113,7 @@ export default defineConfig((ctx) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: ['Notify', 'Dialog'],
+      plugins: ['Notify', 'Dialog', 'Loading'],
     },
 
     // animations: 'all', // --- includes all animations

@@ -24,10 +24,12 @@
                     class="q-pa-sm"
                   >
                     <img
-                      :src="logoPreviewUrl || 'src/assets/logo.png'"
+                      :src="logoPreviewUrl || '/assets/logo.png'"
                       alt="Logotipo da Empresa"
                       class="logo-preview"
+                      v-if="logoPreviewUrl"
                     />
+                    <q-icon v-else name="business" size="80px" color="grey-6" />
                   </q-avatar>
 
                   <q-file
@@ -141,10 +143,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch /*onMounted*/ } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../stores/index.js'
 import apiService from '../services/api.service.js'
+import systemService from '../services/system.service.js'
 
 const $q = useQuasar()
 const authStore = useAuthStore()
@@ -173,6 +176,26 @@ watch(companyLogo, (newLogo) => {
   }
 })
 
+onMounted(async () => {
+  try {
+    const settings = await systemService.getSettings()
+    if (settings && settings.length > 0) {
+      const companySettings = settings[0]
+      existingSettingsId.value = companySettings.id
+      companyName.value = companySettings.company_name || ''
+      companyAddress.value = companySettings.company_address || ''
+      companyPhone.value = companySettings.company_phone || ''
+      companyEmail.value = companySettings.company_email || ''
+      companyNIF.value = companySettings.company_nif || ''
+      logoPreviewUrl.value = companySettings.logo_url || ''
+    }
+  } catch (error) {
+    console.error('Error loading company settings:', error)
+  }
+})
+
+const existingSettingsId = ref(null)
+
 const saveSettings = async () => {
   // Validação dos campos obrigatórios
   if (
@@ -180,8 +203,7 @@ const saveSettings = async () => {
     !companyAddress.value ||
     !companyPhone.value ||
     !companyEmail.value ||
-    !companyNIF.value ||
-    !userID
+    !companyNIF.value
   ) {
     $q.notify({
       type: 'negative',
@@ -194,49 +216,53 @@ const saveSettings = async () => {
   loading.value = true
 
   try {
-    // Gera URL permanente para o logo
-    const logoUrl = companyLogo.value
-      ? `http://localhost:3000/uploads/${Date.now()}-${companyLogo.value.name}`
-      : ''
+    let logoUrl = logoPreviewUrl.value
 
-    // Primeiro salva os dados textuais
-    console.log(logoUrl)
+    // Se um novo logo foi selecionado, faz upload primeiro
+    if (companyLogo.value) {
+      const formData = new FormData()
+      formData.append('logo', companyLogo.value)
+
+      const uploadResponse = await apiService.uploadLogo(formData)
+      logoUrl = uploadResponse.logoUrl
+    }
+
+    // Prepara os dados para salvar
     const settingsData = {
       company_name: companyName.value,
       company_address: companyAddress.value,
       company_phone: companyPhone.value,
       company_email: companyEmail.value,
       company_nif: companyNIF.value,
-      logo_url: logoUrl,
+      logo_url: logoUrl || '',
       user_id: userID,
     }
 
-    // Salva os dados no banco
+    // Salva ou atualiza as configurações
+    await apiService.saveSettings(settingsData)
 
-    const savedSettings = await apiService.saveSettings(settingsData)
-
-    // Se o logo foi selecionado, faz upload após salvar os dados
-    if (companyLogo.value) {
-      const formData = new FormData()
-      formData.append('logo', companyLogo.value)
-      formData.append('companyId', savedSettings.id)
-      formData.append('logoUrl', logoUrl)
-
-      await apiService.uploadLogo(formData)
+    // Recarrega as configurações após salvar
+    const settings = await systemService.getSettings()
+    if (settings && settings.length > 0) {
+      existingSettingsId.value = settings[0].id
     }
 
     $q.notify({
       type: 'positive',
       message: 'Configurações salvas com sucesso!',
       position: 'top',
+      timeout: 3000,
     })
+
+    // Limpa o arquivo de logo após salvar
+    companyLogo.value = null
   } catch (error) {
+    console.error('Erro ao salvar configurações:', error)
     $q.notify({
       type: 'negative',
       message: error.message || 'Erro ao salvar configurações',
       position: 'top',
     })
-    throw error
   } finally {
     loading.value = false
   }

@@ -181,6 +181,9 @@ app.use(
   }),
 )
 app.use(express.json())
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 console.log('Middleware configured')
 
 // Verificação de assinatura ativa
@@ -311,30 +314,59 @@ app.post('/api/settings', async (req, res) => {
         })
       }
 
-      // Save settings to database
-      const stmt = db.prepare(
-        `
-        INSERT INTO settings
-        (company_name, company_address, company_phone, company_email, company_nif, logo_url, user_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `,
-      )
+      // Check if settings already exist
+      const existingSettings = db.prepare('SELECT id FROM settings LIMIT 1').get()
 
-      const result = stmt.run(
-        settings.company_name,
-        settings.company_address,
-        settings.company_phone,
-        settings.company_email,
-        settings.company_nif,
-        settings.logo_url || '',
-        settings.user_id,
-      )
+      let result
+      if (existingSettings) {
+        // Update existing settings
+        const stmt = db.prepare(
+          `
+          UPDATE settings SET
+            company_name = ?,
+            company_address = ?,
+            company_phone = ?,
+            company_email = ?,
+            company_nif = ?,
+            logo_url = ?
+          WHERE id = ?
+        `,
+        )
 
-      if (!result.lastInsertRowid) {
+        result = stmt.run(
+          settings.company_name,
+          settings.company_address,
+          settings.company_phone,
+          settings.company_email,
+          settings.company_nif,
+          settings.logo_url || '',
+          existingSettings.id,
+        )
+      } else {
+        // Insert new settings
+        const stmt = db.prepare(
+          `
+          INSERT INTO settings
+          (company_name, company_address, company_phone, company_email, company_nif, logo_url)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `,
+        )
+
+        result = stmt.run(
+          settings.company_name,
+          settings.company_address,
+          settings.company_phone,
+          settings.company_email,
+          settings.company_nif,
+          settings.logo_url || '',
+        )
+      }
+
+      if (!existingSettings && !result.lastInsertRowid) {
         console.error('Failed to save settings:', result)
         return res.status(500).json({
           message: 'Failed to save settings',
-          error: 'No lastInsertRowid returned',
+          error: 'Failed to insert settings',
           details: result,
         })
       }
@@ -1614,7 +1646,7 @@ app.delete('/api/users/:id', async (req, res) => {
 // System Settings Endpoints
 app.get('/api/system-settings', async (req, res) => {
   try {
-    const settings = db.prepare('SELECT * FROM settings').all()
+    const settings = db.prepare('SELECT * FROM settings ORDER BY created_at DESC LIMIT 1').all()
     return res.status(200).json(settings)
   } catch (error) {
     console.error('Error getting system settings:', error)

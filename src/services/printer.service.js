@@ -61,8 +61,17 @@ class PrinterService {
       throw new Error('Sale object is required')
     }
 
-    const { company_name, company_address, company_phone, company_nif } = this.settings
+    const { company_name, company_address, company_phone, company_email, company_nif } =
+      this.settings
     const { items = [], paymentMethod = 'cash', paymentAmount = 0 } = sale || {}
+
+    // Gerar número da fatura
+    const date = new Date()
+    const invoiceNumber = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${Math.floor(
+      Math.random() * 1000,
+    )
+      .toString()
+      .padStart(3, '0')}`
 
     // Definir larguras fixas para cada coluna
     const colWidths = {
@@ -80,11 +89,18 @@ class PrinterService {
       `${company_name}\n`,
       '\x1B\x21\x00', // Texto normal
       `${company_address}\n`,
-      `Telefone: ${company_phone}\n`,
+      `Tel: ${company_phone}\n`,
+      company_email ? `Email: ${company_email}\n` : '',
       `NIF: ${company_nif}\n`,
+      '\n',
       '\x1B\x45\x01', // Negrito
+      '\x1B\x61\x01', // Centro
       'FATURA\n',
       '\x1B\x45\x00', // Normal
+      '\x1B\x61\x00', // Esquerda
+      `Nº: ${invoiceNumber}\n`,
+      `Data: ${date.toLocaleDateString('pt-AO')}\n`,
+      `Hora: ${date.toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' })}\n`,
       '----------------------------------------------------\n',
     ]
 

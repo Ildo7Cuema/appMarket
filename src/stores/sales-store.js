@@ -28,7 +28,17 @@ export const useSalesStore = defineStore('sales', {
       }
     },
     async createSale(saleData) {
-      console.log(saleData)
+      try {
+        // Create sale (without automatic printing by default)
+        const newSale = await salesService.createSale(saleData)
+        this.sales.push(newSale)
+        return newSale
+      } catch (error) {
+        this.error = error
+        throw error // Re-throw to allow handling in components
+      }
+    },
+    async createSaleWithPrinting(saleData) {
       try {
         // Print invoice before creating sale
         await printerService.printInvoice(saleData)
@@ -36,6 +46,7 @@ export const useSalesStore = defineStore('sales', {
         // Create sale after successful printing
         const newSale = await salesService.createSale(saleData)
         this.sales.push(newSale)
+        return newSale
       } catch (error) {
         this.error = error
         throw error // Re-throw to allow handling in components
