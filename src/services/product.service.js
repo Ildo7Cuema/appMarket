@@ -18,7 +18,17 @@ export default {
       const response = await axios.post(`${API_URL}/categories`, category)
       return response.data
     } catch (error) {
-      throw new Error('Erro ao criar categoria: ' + error.message)
+      if (error.response) {
+        const message =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          `Erro ${error.response.status} ao criar categoria`
+        throw new Error(message)
+      } else if (error.request) {
+        throw new Error('Sem resposta do servidor ao tentar criar categoria')
+      } else {
+        throw new Error('Erro ao configurar requisição: ' + error.message)
+      }
     }
   },
 
@@ -27,7 +37,17 @@ export default {
       const response = await axios.put(`${API_URL}/categories/${id}`, category)
       return response.data
     } catch (error) {
-      throw new Error('Erro ao atualizar categoria: ' + error.message)
+      if (error.response) {
+        const message =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          `Erro ${error.response.status} ao atualizar categoria`
+        throw new Error(message)
+      } else if (error.request) {
+        throw new Error('Sem resposta do servidor ao tentar atualizar categoria')
+      } else {
+        throw new Error('Erro ao configurar requisição: ' + error.message)
+      }
     }
   },
 
@@ -36,7 +56,18 @@ export default {
       const response = await axios.delete(`${API_URL}/categories/${id}`)
       return response.data
     } catch (error) {
-      throw new Error('Erro ao excluir categoria: ' + error.message)
+      if (error.response) {
+        // Erro da API - usar a mensagem específica do servidor
+        const message =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          `Erro ${error.response.status} ao excluir categoria`
+        throw new Error(message)
+      } else if (error.request) {
+        throw new Error('Sem resposta do servidor ao tentar excluir categoria')
+      } else {
+        throw new Error('Erro ao configurar requisição: ' + error.message)
+      }
     }
   },
 
@@ -171,6 +202,26 @@ export default {
         throw new Error(message)
       } else if (error.request) {
         throw new Error('Sem resposta do servidor ao tentar excluir produto')
+      } else {
+        throw new Error('Erro ao configurar requisição: ' + error.message)
+      }
+    }
+  },
+
+  async reactivateProduct(id) {
+    try {
+      const response = await axios.patch(`${API_URL}/products/${id}/reactivate`)
+      return response.data
+    } catch (error) {
+      if (error.response) {
+        // Erro da API
+        const message =
+          error.response.data?.message ||
+          error.response.data?.error ||
+          `Erro ${error.response.status} ao reativar produto`
+        throw new Error(message)
+      } else if (error.request) {
+        throw new Error('Sem resposta do servidor ao tentar reativar produto')
       } else {
         throw new Error('Erro ao configurar requisição: ' + error.message)
       }

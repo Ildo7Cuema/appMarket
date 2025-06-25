@@ -304,12 +304,34 @@ export default {
           })
           loadCategories()
         } catch (error) {
-          $q.notify({
-            type: 'negative',
-            message: error.message,
-            position: 'top',
-            timeout: 2500,
-          })
+          // Mostrar erro detalhado em diálogo se a mensagem for longa
+          if (error.message.length > 100) {
+            $q.dialog({
+              title: 'Erro ao Excluir Categoria',
+              message: error.message,
+              html: true,
+              ok: {
+                label: 'Entendi',
+                color: 'primary',
+              },
+              style: 'max-width: 600px',
+              class: 'error-dialog',
+            })
+          } else {
+            $q.notify({
+              type: 'negative',
+              message: error.message,
+              position: 'top',
+              timeout: 5000,
+              multiLine: true,
+              actions: [
+                {
+                  icon: 'close',
+                  color: 'white',
+                },
+              ],
+            })
+          }
         } finally {
           loading.value = false
           formClean()
@@ -494,6 +516,33 @@ export default {
   .dialog-card {
     width: 90vw;
     min-width: unset !important;
+  }
+}
+
+/* Estilo para diálogo de erro */
+:deep(.error-dialog .q-dialog__inner > div) {
+  border-radius: 12px;
+}
+
+:deep(.error-dialog .q-card__section--vert) {
+  white-space: pre-line;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+:deep(.error-dialog .q-card__section--vert strong) {
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+:deep(.error-dialog) {
+  max-width: 600px;
+}
+
+@media (max-width: 599px) {
+  :deep(.error-dialog) {
+    margin: 16px;
+    max-width: calc(100vw - 32px);
   }
 }
 </style>

@@ -680,18 +680,24 @@ app.put('/api/employees/:id', async (req, res) => {
 
 app.get('/api/products', async (req, res) => {
   try {
-    const products = db
-      .prepare(
-        `
+    const { include_inactive = 'false' } = req.query
+
+    let query = `
       SELECT
         p.*,
         c.name as category_name,
         c.description as category_description
       FROM products p
       LEFT JOIN categories c ON p.category_id = c.id
-    `,
-      )
-      .all()
+    `
+
+    if (include_inactive !== 'true') {
+      query += ' WHERE p.is_active = 1'
+    }
+
+    query += ' ORDER BY p.name'
+
+    const products = db.prepare(query).all()
     return res.status(200).json(products)
   } catch (error) {
     console.error('Error getting products:', error)
@@ -813,6 +819,107 @@ app.put('/api/products/:id', async (req, res) => {
     console.error('Error updating product:', error)
     return res.status(500).json({
       message: 'Internal server error',
+      error: error.message,
+    })
+  }
+})
+
+// Delete product endpoint (soft delete)
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Verificar se o produto existe e está ativo
+    const product = db.prepare('SELECT * FROM products WHERE id = ? AND is_active = 1').get(id)
+
+    if (!product) {
+      return res.status(404).json({
+        message: 'Produto não encontrado ou já foi excluído',
+      })
+    }
+
+    // Verificar se o produto tem movimentações de estoque
+    const stockMovements = db
+      .prepare('SELECT COUNT(*) as count FROM stock_movements WHERE product_id = ?')
+      .get(id)
+
+    // Verificar se o produto tem vendas
+    const saleItems = db
+      .prepare('SELECT COUNT(*) as count FROM sale_items WHERE product_id = ?')
+      .get(id)
+
+    // Se tem movimentações ou vendas, fazer soft delete
+    if (stockMovements.count > 0 || saleItems.count > 0) {
+      // Marcar como inativo (soft delete)
+      const stmt = db.prepare('UPDATE products SET is_active = 0 WHERE id = ?')
+      const result = stmt.run(id)
+
+      if (result.changes === 0) {
+        return res.status(404).json({
+          message: 'Produto não encontrado',
+        })
+      }
+
+      return res.status(200).json({
+        message: 'Produto desativado com sucesso (mantendo histórico de vendas e movimentações)',
+        type: 'soft_delete',
+      })
+    } else {
+      // Se não tem movimentações nem vendas, pode fazer hard delete
+      const stmt = db.prepare('DELETE FROM products WHERE id = ?')
+      const result = stmt.run(id)
+
+      if (result.changes === 0) {
+        return res.status(404).json({
+          message: 'Produto não encontrado',
+        })
+      }
+
+      return res.status(200).json({
+        message: 'Produto excluído permanentemente com sucesso',
+        type: 'hard_delete',
+      })
+    }
+  } catch (error) {
+    console.error('Error deleting product:', error)
+    return res.status(500).json({
+      message: 'Erro interno ao excluir produto',
+      error: error.message,
+    })
+  }
+})
+
+// Reactivate product endpoint
+app.patch('/api/products/:id/reactivate', async (req, res) => {
+  try {
+    const { id } = req.params
+
+    // Verificar se o produto existe e está inativo
+    const product = db.prepare('SELECT * FROM products WHERE id = ? AND is_active = 0').get(id)
+
+    if (!product) {
+      return res.status(404).json({
+        message: 'Produto não encontrado ou já está ativo',
+      })
+    }
+
+    // Reativar o produto
+    const stmt = db.prepare('UPDATE products SET is_active = 1 WHERE id = ?')
+    const result = stmt.run(id)
+
+    if (result.changes === 0) {
+      return res.status(404).json({
+        message: 'Produto não encontrado',
+      })
+    }
+
+    return res.status(200).json({
+      message: 'Produto reativado com sucesso',
+    })
+  } catch (error) {
+    console.error('Error reactivating product:', error)
+    return res.status(500).json({
+      message: 'Erro interno ao reativar produto',
       error: error.message,
     })
   }
@@ -1346,18 +1453,64 @@ app.delete('/api/categories/:id', async (req, res) => {
   try {
     const { id } = req.params
 
-    // Check if category is used by any products
-    const productsCount = db
+    // Get category name first
+    const category = db.prepare('SELECT name FROM categories WHERE id = ?').get(id)
+
+    if (!category) {
+      return res.status(404).json({
+        message: 'Categoria não encontrada',
+      })
+    }
+
+    // Check if category is used by any products and get details
+    const productsUsingCategory = db
       .prepare(
         `
-      SELECT COUNT(*) as count FROM products WHERE category_id = ?
+      SELECT p.id, p.name, p.code
+      FROM products p
+      WHERE p.category_id = ?
+      LIMIT 5
     `,
       )
-      .get(id).count
+      .all(id)
 
-    if (productsCount > 0) {
+    if (productsUsingCategory.length > 0) {
+      const totalCount = db
+        .prepare('SELECT COUNT(*) as count FROM products WHERE category_id = ?')
+        .get(id).count
+
+      const productNames = productsUsingCategory
+        .map((p) => `<strong>"${p.name}"</strong> (${p.code})`)
+        .join(', ')
+
+      let message = `<div style="text-align: left;">
+        <p><strong>⚠️ Não é possível excluir a categoria "${category.name}"</strong></p>
+        <p>Esta categoria está sendo usada por <strong>${totalCount} produto(s)</strong>.</p>`
+
+      if (totalCount <= 5) {
+        message += `<p><strong>Produtos que usam esta categoria:</strong><br/>
+        ${productNames}</p>`
+      } else {
+        message += `<p><strong>Alguns produtos que usam esta categoria:</strong><br/>
+        ${productNames}... <em>e mais ${totalCount - 5} produtos</em></p>`
+      }
+
+      message += `<p><strong>🔧 Para excluir esta categoria, você precisa primeiro:</strong></p>
+        <ul style="text-align: left; margin: 0; padding-left: 20px;">
+          <li>Alterar a categoria destes produtos para outra categoria, ou</li>
+          <li>Remover a categoria destes produtos, ou</li>
+          <li>Excluir os produtos que não são mais necessários</li>
+        </ul>
+        <p><em>💡 Acesse "Gestão de Produtos" para fazer essas alterações.</em></p>
+      </div>`
+
       return res.status(400).json({
-        message: 'Cannot delete category - it is being used by products',
+        message: message,
+        details: {
+          categoryName: category.name,
+          productsCount: totalCount,
+          affectedProducts: productsUsingCategory,
+        },
       })
     }
 
@@ -1366,17 +1519,17 @@ app.delete('/api/categories/:id', async (req, res) => {
 
     if (result.changes === 0) {
       return res.status(404).json({
-        message: 'Category not found',
+        message: 'Categoria não encontrada',
       })
     }
 
     return res.status(200).json({
-      message: 'Category deleted successfully',
+      message: `Categoria "${category.name}" excluída com sucesso`,
     })
   } catch (error) {
     console.error('Error deleting category:', error)
     return res.status(500).json({
-      message: 'Internal server error',
+      message: 'Erro interno do servidor ao excluir categoria',
       error: error.message,
     })
   }

@@ -195,6 +195,15 @@
               />
             </div>
 
+            <div class="col-auto">
+              <q-toggle
+                v-model="activeFilters.showInactive"
+                label="Produtos Desativados"
+                color="grey"
+                icon="visibility_off"
+              />
+            </div>
+
             <!-- Chips de Filtros Ativos -->
             <div class="col-12 q-mt-sm">
               <q-chip
@@ -277,6 +286,7 @@
               bordered
               separator="cell"
               class="modern-table"
+              :row-class-name="(row) => (row.is_active ? '' : 'inactive-row')"
             >
               <!-- Loading State -->
               <template v-slot:loading>
@@ -284,6 +294,22 @@
                   <q-spinner-gears size="50px" color="primary" />
                   <div class="text-primary text-caption q-mt-sm">Carregando produtos...</div>
                 </q-inner-loading>
+              </template>
+
+              <!-- Custom Status Cell -->
+              <template v-slot:body-cell-status="props">
+                <q-td :props="props" class="text-center">
+                  <q-badge
+                    :color="props.row.is_active ? 'positive' : 'grey'"
+                    :label="props.row.is_active ? 'Ativo' : 'Desativado'"
+                    class="q-px-sm q-py-xs"
+                  >
+                    <q-icon
+                      :name="props.row.is_active ? 'check_circle' : 'visibility_off'"
+                      class="q-mr-xs"
+                    />
+                  </q-badge>
+                </q-td>
               </template>
 
               <!-- Custom Stock Cell -->
@@ -351,10 +377,16 @@
                       icon="edit"
                       @click="editProduct(props.row)"
                       class="q-mx-xs"
+                      :disable="!props.row.is_active"
                     >
-                      <q-tooltip>Editar Produto</q-tooltip>
+                      <q-tooltip>{{
+                        props.row.is_active
+                          ? 'Editar Produto'
+                          : 'Produto desativado - não pode ser editado'
+                      }}</q-tooltip>
                     </q-btn>
                     <q-btn
+                      v-if="props.row.is_active"
                       flat
                       round
                       color="negative"
@@ -363,6 +395,17 @@
                       class="q-mx-xs"
                     >
                       <q-tooltip>Excluir Produto</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      v-else
+                      flat
+                      round
+                      color="positive"
+                      icon="restore"
+                      @click="confirmReactivate(props.row)"
+                      class="q-mx-xs"
+                    >
+                      <q-tooltip>Reativar Produto</q-tooltip>
                     </q-btn>
                   </q-btn-group>
                 </q-td>
@@ -387,20 +430,36 @@
                 :key="product.id"
                 class="col-12 col-sm-6 col-md-4 col-lg-3"
               >
-                <q-card class="product-card">
+                <q-card
+                  class="product-card"
+                  :class="{ 'product-card--inactive': !product.is_active }"
+                >
                   <q-img
                     :src="getImageUrl(product.image_url)"
                     :ratio="16 / 9"
                     class="cursor-pointer"
-                    @click="editProduct(product)"
+                    @click="product.is_active ? editProduct(product) : null"
                     loading="eager"
                     @error="handleImageError"
+                    :class="{ 'inactive-image': !product.is_active }"
                   >
                     <template v-slot:error>
                       <div class="absolute-full flex flex-center bg-negative text-white">
                         Erro ao carregar imagem
                       </div>
                     </template>
+                    <div class="absolute-top-left q-pa-sm">
+                      <q-badge
+                        :color="product.is_active ? 'positive' : 'grey'"
+                        class="q-px-sm q-py-xs text-weight-bold"
+                      >
+                        <q-icon
+                          :name="product.is_active ? 'check_circle' : 'visibility_off'"
+                          class="q-mr-xs"
+                        />
+                        {{ product.is_active ? 'Ativo' : 'Desativado' }}
+                      </q-badge>
+                    </div>
                     <div class="absolute-top-right q-pa-sm">
                       <q-badge
                         :color="getStockColor(product.quantity)"
@@ -434,10 +493,22 @@
                   <q-separator />
 
                   <q-card-actions align="right">
-                    <q-btn flat round color="primary" icon="edit" @click="editProduct(product)">
-                      <q-tooltip>Editar Produto</q-tooltip>
+                    <q-btn
+                      flat
+                      round
+                      color="primary"
+                      icon="edit"
+                      @click="editProduct(product)"
+                      :disable="!product.is_active"
+                    >
+                      <q-tooltip>{{
+                        product.is_active
+                          ? 'Editar Produto'
+                          : 'Produto desativado - não pode ser editado'
+                      }}</q-tooltip>
                     </q-btn>
                     <q-btn
+                      v-if="product.is_active"
                       flat
                       round
                       color="negative"
@@ -445,6 +516,16 @@
                       @click="confirmDelete(product)"
                     >
                       <q-tooltip>Excluir Produto</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      v-else
+                      flat
+                      round
+                      color="positive"
+                      icon="restore"
+                      @click="confirmReactivate(product)"
+                    >
+                      <q-tooltip>Reativar Produto</q-tooltip>
                     </q-btn>
                   </q-card-actions>
                 </q-card>
@@ -661,7 +742,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useStockStore } from '../stores/stock-store'
 import productService from '../services/product.service'
@@ -687,6 +768,7 @@ const activeFilters = ref({
   maxStock: null,
   showLowStock: false,
   showOutOfStock: false,
+  showInactive: false,
 })
 const sortOptions = ref({
   field: 'name',
@@ -753,6 +835,14 @@ const activeFilterChips = computed(() => {
     })
   }
 
+  if (activeFilters.value.showInactive) {
+    chips.push({
+      type: 'showInactive',
+      label: 'Produtos desativados',
+      color: 'grey',
+    })
+  }
+
   return chips
 })
 
@@ -779,6 +869,14 @@ const columns = [
     label: 'Imagem',
     field: 'image_url',
     align: 'center',
+    style: 'width: 80px',
+  },
+  {
+    name: 'status',
+    align: 'center',
+    label: 'Status',
+    field: 'is_active',
+    sortable: true,
     style: 'width: 80px',
   },
   {
@@ -828,7 +926,7 @@ const columns = [
     align: 'center',
     label: 'Ações',
     field: 'actions',
-    style: 'width: 100px',
+    style: 'width: 120px',
   },
 ]
 
@@ -913,7 +1011,7 @@ const products = computed(() => {
 async function loadData() {
   try {
     loading.value = true
-    await stockStore.loadProducts()
+    await stockStore.loadProducts('', activeFilters.value.showInactive)
     categories.value = await productService.getCategories()
   } catch (error) {
     $q.notify({
@@ -953,17 +1051,47 @@ function confirmDelete(product) {
   $q.dialog({
     title: 'Confirmar Exclusão',
     message: `Tem certeza que deseja excluir ${product.name}?`,
-    cancel: true,
+    html: true,
     persistent: true,
+    ok: {
+      label: 'Excluir',
+      color: 'negative',
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey',
+    },
   }).onOk(async () => {
     try {
       loading.value = true
-      await productService.deleteProduct(product.id)
+      const result = await productService.deleteProduct(product.id)
       await loadData()
-      $q.notify({
-        type: 'positive',
-        message: 'Produto excluído com sucesso',
-      })
+
+      // Mostrar mensagem baseada no tipo de exclusão
+      if (result.type === 'soft_delete') {
+        $q.notify({
+          type: 'warning',
+          message: 'Produto desativado com sucesso',
+          caption: 'O produto foi mantido no sistema para preservar o histórico',
+          icon: 'archive',
+          timeout: 6000,
+          actions: [{ icon: 'close', color: 'white' }],
+        })
+      } else if (result.type === 'hard_delete') {
+        $q.notify({
+          type: 'positive',
+          message: 'Produto excluído permanentemente',
+          caption: 'O produto foi removido do sistema',
+          icon: 'delete_forever',
+          timeout: 4000,
+        })
+      } else {
+        $q.notify({
+          type: 'positive',
+          message: result.message || 'Produto excluído com sucesso',
+          timeout: 4000,
+        })
+      }
     } catch (error) {
       console.error('Erro ao excluir produto:', error)
       $q.notify({
@@ -972,6 +1100,39 @@ function confirmDelete(product) {
         caption: error.response?.data?.details || '',
         timeout: 5000,
         actions: [{ icon: 'close', color: 'white' }],
+      })
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+function confirmReactivate(product) {
+  $q.dialog({
+    title: 'Confirmar Reativação',
+    message: `Tem certeza que deseja reativar o produto "${product.name}"?`,
+    html: true,
+    persistent: true,
+    ok: {
+      label: 'Reativar',
+      color: 'positive',
+      icon: 'restore',
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey',
+    },
+  }).onOk(async () => {
+    try {
+      loading.value = true
+      await stockStore.reactivateProduct(product.id)
+      await loadData()
+    } catch (error) {
+      console.error('Erro ao reativar produto:', error)
+      $q.notify({
+        type: 'negative',
+        message: error.message || 'Erro ao reativar produto',
+        timeout: 5000,
       })
     } finally {
       loading.value = false
@@ -1186,6 +1347,9 @@ function removeFilter(filterType) {
     case 'showOutOfStock':
       activeFilters.value.showOutOfStock = false
       break
+    case 'showInactive':
+      activeFilters.value.showInactive = false
+      break
   }
 }
 
@@ -1290,6 +1454,16 @@ async function uploadImage(file) {
   }
 }
 
+// Watcher para recarregar dados quando filtro de produtos inativos mudar
+watch(
+  () => activeFilters.value.showInactive,
+  (newVal, oldVal) => {
+    if (newVal !== oldVal) {
+      loadData()
+    }
+  },
+)
+
 onMounted(() => {
   loadData()
 
@@ -1386,6 +1560,25 @@ onMounted(() => {
   background: #f0f7ff !important;
 }
 
+.modern-table :deep(tbody tr:has(td[data-inactive='true'])) {
+  opacity: 0.7;
+  background: #f5f5f5;
+}
+
+.modern-table :deep(tbody tr:has(td[data-inactive='true']):hover) {
+  background: #eeeeee !important;
+}
+
+/* Estilo alternativo usando classes */
+.modern-table :deep(.inactive-row) {
+  opacity: 0.7;
+  background: #f5f5f5;
+}
+
+.modern-table :deep(.inactive-row:hover) {
+  background: #eeeeee !important;
+}
+
 .product-card {
   border-radius: 12px;
   transition: all 0.3s ease;
@@ -1395,6 +1588,22 @@ onMounted(() => {
 .product-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.product-card--inactive {
+  opacity: 0.7;
+  filter: grayscale(30%);
+  border: 2px solid #e0e0e0;
+}
+
+.product-card--inactive:hover {
+  transform: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.inactive-image {
+  opacity: 0.8;
+  filter: grayscale(40%);
 }
 
 .image-upload-card {

@@ -1,10 +1,13 @@
 import { api } from 'boot/axios'
 
 export default {
-  async getProducts(query = '') {
+  async getProducts(query = '', includeInactive = false) {
     try {
       const response = await api.get('/products', {
-        params: { q: query },
+        params: {
+          q: query,
+          include_inactive: includeInactive ? 'true' : 'false',
+        },
       })
       return response.data
     } catch (error) {
@@ -103,6 +106,16 @@ export default {
       return response.data
     } catch (error) {
       console.error('Erro ao deletar produto:', error)
+      throw error
+    }
+  },
+
+  async reactivateProduct(id) {
+    try {
+      const response = await api.patch(`/products/${id}/reactivate`)
+      return response.data
+    } catch (error) {
+      console.error('Erro ao reativar produto:', error)
       throw error
     }
   },

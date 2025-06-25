@@ -15,10 +15,10 @@ export const useStockStore = defineStore('stock', () => {
   const loading = ref(false)
 
   // Actions
-  async function loadProducts(query = '') {
+  async function loadProducts(query = '', includeInactive = false) {
     try {
       loading.value = true
-      products.value = await stockService.getProducts(query)
+      products.value = await stockService.getProducts(query, includeInactive)
     } catch (error) {
       showError('Erro ao carregar produtos')
       console.error('Erro ao carregar produtos:', error)
@@ -145,6 +145,101 @@ export const useStockStore = defineStore('stock', () => {
     }
   }
 
+  async function deleteProduct(productId) {
+    try {
+      loading.value = true
+      await stockService.deleteProduct(productId)
+
+      // Remove o produto da lista local
+      const index = products.value.findIndex((p) => p.id === productId)
+      if (index !== -1) {
+        products.value.splice(index, 1)
+      }
+
+      $q.notify({
+        type: 'positive',
+        message: 'Produto excluído com sucesso',
+      })
+    } catch (error) {
+      showError('Erro ao excluir produto')
+      console.error('Erro ao excluir produto:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function deleteProducts(productIds) {
+    try {
+      loading.value = true
+      const deletePromises = productIds.map((id) => stockService.deleteProduct(id))
+
+      // Executar todos os deletes em paralelo
+      const results = await Promise.allSettled(deletePromises)
+
+      // Contar sucessos e falhas
+      const successful = results.filter((result) => result.status === 'fulfilled')
+      const failed = results.filter((result) => result.status === 'rejected')
+
+      // Remover produtos bem-sucedidos da lista local
+      successful.forEach((_, index) => {
+        const productId = productIds[index]
+        const productIndex = products.value.findIndex((p) => p.id === productId)
+        if (productIndex !== -1) {
+          products.value.splice(productIndex, 1)
+        }
+      })
+
+      // Mostrar notificação apropriada
+      if (failed.length === 0) {
+        $q.notify({
+          type: 'positive',
+          message: `${successful.length} produtos excluídos com sucesso`,
+        })
+      } else if (successful.length === 0) {
+        $q.notify({
+          type: 'negative',
+          message: 'Erro ao excluir todos os produtos selecionados',
+        })
+      } else {
+        $q.notify({
+          type: 'warning',
+          message: `${successful.length} produtos excluídos, ${failed.length} falharam`,
+        })
+      }
+    } catch (error) {
+      showError('Erro ao excluir produtos')
+      console.error('Erro ao excluir produtos:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function reactivateProduct(productId) {
+    try {
+      loading.value = true
+      await stockService.reactivateProduct(productId)
+
+      // Atualizar o produto na lista local
+      const index = products.value.findIndex((p) => p.id === productId)
+      if (index !== -1) {
+        products.value[index].is_active = 1
+      }
+
+      $q.notify({
+        type: 'positive',
+        message: 'Produto reativado com sucesso',
+      })
+    } catch (error) {
+      showError('Erro ao reativar produto')
+      console.error('Erro ao reativar produto:', error)
+      throw error
+    } finally {
+      loading.value = false
+    }
+  }
+
   function showError(message) {
     $q.notify({
       type: 'negative',
@@ -170,5 +265,8 @@ export const useStockStore = defineStore('stock', () => {
     addMovement,
     addProduct,
     updateProduct,
+    deleteProduct,
+    deleteProducts,
+    reactivateProduct,
   }
 })
