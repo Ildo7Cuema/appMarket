@@ -6,3 +6,6 @@ do
   node activation.js mensal
 done
 
+
+
+
