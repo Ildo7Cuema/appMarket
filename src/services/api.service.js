@@ -131,7 +131,15 @@ const apiService = {
   // Métodos de configuração
   async saveSettings(settings) {
     try {
-      const response = await api.post('/settings', settings)
+      // Garantir que os campos do emissor tenham valores padrão se não fornecidos
+      const settingsWithDefaults = {
+        ...settings,
+        emitter_name: settings.emitter_name || 'Eng. Ildo Cuema',
+        emitter_title: settings.emitter_title || 'Director Executivo',
+        emitter_company: settings.emitter_company || 'E-Tech Soluções Digitais, Lda',
+      }
+
+      const response = await api.post('/settings', settingsWithDefaults)
       return response.data
     } catch (error) {
       throw new Error('Erro ao salvar configurações: ' + error.message)

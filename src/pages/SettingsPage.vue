@@ -119,6 +119,74 @@
           </q-card-section>
         </q-card>
 
+        <!-- Seção Informações do Emissor -->
+        <q-card class="q-mb-md">
+          <q-card-section dense class="bg-secondary text-white">
+            <div class="text-h6">Informações do Emissor</div>
+            <div class="text-caption">
+              Dados que aparecem na seção "Emitido por" das faturas pro-forma
+            </div>
+          </q-card-section>
+
+          <q-card-section>
+            <div class="row q-col-gutter-md">
+              <div class="col-12 col-md-4">
+                <q-input
+                  v-model="emitterName"
+                  label="Nome do Emissor"
+                  :rules="[(val) => !!val || 'Campo obrigatório']"
+                  class="q-mb-md"
+                  hint="Ex: Eng. Ildo Cuema"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="person" />
+                  </template>
+                </q-input>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <q-input
+                  v-model="emitterTitle"
+                  label="Cargo/Função"
+                  :rules="[(val) => !!val || 'Campo obrigatório']"
+                  class="q-mb-md"
+                  hint="Ex: Director Executivo"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="work" />
+                  </template>
+                </q-input>
+              </div>
+
+              <div class="col-12 col-md-4">
+                <q-input
+                  v-model="emitterCompany"
+                  label="Empresa do Emissor"
+                  :rules="[(val) => !!val || 'Campo obrigatório']"
+                  class="q-mb-md"
+                  hint="Ex: E-Tech Soluções Digitais, Lda"
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="business" />
+                  </template>
+                </q-input>
+              </div>
+            </div>
+
+            <!-- Preview da seção "Emitido por" -->
+            <q-separator class="q-my-md" />
+            <div class="text-subtitle2 text-grey-7 q-mb-sm">Preview da seção "Emitido por":</div>
+            <q-card flat bordered class="bg-grey-1">
+              <q-card-section class="q-pa-md">
+                <div class="text-weight-bold">Emitido por:</div>
+                <div class="q-mt-xs">{{ emitterName || 'Eng. Ildo Cuema' }}</div>
+                <div class="q-mt-xs">{{ emitterTitle || 'Director Executivo' }}</div>
+                <div class="q-mt-xs">{{ emitterCompany || 'E-Tech Soluções Digitais, Lda' }}</div>
+              </q-card-section>
+            </q-card>
+          </q-card-section>
+        </q-card>
+
         <!-- Botão de Salvar -->
         <div class="row justify-end q-mt-md">
           <q-btn
@@ -167,6 +235,9 @@ const companyAddress = ref('')
 const companyPhone = ref('')
 const companyEmail = ref('')
 const companyNIF = ref('')
+const emitterName = ref('')
+const emitterTitle = ref('')
+const emitterCompany = ref('')
 
 watch(companyLogo, (newLogo) => {
   if (newLogo) {
@@ -188,6 +259,9 @@ onMounted(async () => {
       companyEmail.value = companySettings.company_email || ''
       companyNIF.value = companySettings.company_nif || ''
       logoPreviewUrl.value = companySettings.logo_url || ''
+      emitterName.value = companySettings.emitter_name || 'Eng. Ildo Cuema'
+      emitterTitle.value = companySettings.emitter_title || 'Director Executivo'
+      emitterCompany.value = companySettings.emitter_company || 'E-Tech Soluções Digitais, Lda'
     }
   } catch (error) {
     console.error('Error loading company settings:', error)
@@ -203,7 +277,10 @@ const saveSettings = async () => {
     !companyAddress.value ||
     !companyPhone.value ||
     !companyEmail.value ||
-    !companyNIF.value
+    !companyNIF.value ||
+    !emitterName.value ||
+    !emitterTitle.value ||
+    !emitterCompany.value
   ) {
     $q.notify({
       type: 'negative',
@@ -235,6 +312,9 @@ const saveSettings = async () => {
       company_email: companyEmail.value,
       company_nif: companyNIF.value,
       logo_url: logoUrl || '',
+      emitter_name: emitterName.value,
+      emitter_title: emitterTitle.value,
+      emitter_company: emitterCompany.value,
       user_id: userID,
     }
 

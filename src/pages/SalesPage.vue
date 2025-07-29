@@ -554,51 +554,70 @@ export default {
     const dailySales = computed(() => {
       const authStore = useAuthStore()
       const today = new Date().toISOString().split('T')[0]
-      console.log(today)
+      console.log('Data de hoje:', today)
+
       if (!sales.value || !authStore.user) {
         console.log('No sales data or user not authenticated')
         return 0
       }
 
-      const userIdStorage = localStorage.getItem('user_id')
+      // Obter o email do usuário logado
+      let userEmail = authStore.user.email
+      if (!userEmail) {
+        console.log('Email não encontrado no auth store')
+        return 0
+      }
 
-      const userDailySales = sales.value
-        .filter((sale) => {
-          const saleDate = sale?.created_at ? new Date(sale.created_at) : null
-          const isValidDate = saleDate instanceof Date && !isNaN(saleDate)
-          const formattedDate = isValidDate ? saleDate.toISOString().split('T')[0] : null
-          const isToday = formattedDate === today
-          const isUserSale = sale?.employee_id?.toString() === userIdStorage?.toString()
+      console.log('Email do usuário logado:', userEmail)
+      console.log('Role do usuário:', authStore.user.role)
 
-          /* console.log('Venda:', {
-            id: sale?.id,
-            date: saleDate,
-            isToday,
-            employee_id: sale?.employee_id,
-            isUserSale,
-          })
-*/
-          return isToday && isUserSale
+      // Filtrar vendas do dia atual
+      const todaySales = sales.value.filter((sale) => {
+        const saleDate = sale?.created_at ? new Date(sale.created_at) : null
+        const isValidDate = saleDate instanceof Date && !isNaN(saleDate)
+        const formattedDate = isValidDate ? saleDate.toISOString().split('T')[0] : null
+        const isToday = formattedDate === today
+
+        // Se for admin, mostrar todas as vendas de hoje
+        if (authStore.user.role === 'admin') {
+          console.log('Admin - mostrando todas as vendas de hoje')
+          return isToday
+        }
+
+        // Se for operador de caixa, mostrar apenas vendas do funcionário logado
+        // Comparar email do funcionário com email do usuário logado
+        const isUserSale =
+          sale?.employee_name &&
+          ((userEmail.includes('marquescuema') &&
+            sale.employee_name.toLowerCase().includes('marques')) ||
+            (userEmail.includes('manuelvaz') &&
+              sale.employee_name.toLowerCase().includes('manuel')) ||
+            (userEmail.includes('ildocuema') && sale.employee_name.toLowerCase().includes('ildo')))
+
+        console.log('Venda:', {
+          id: sale?.id,
+          date: formattedDate,
+          isToday,
+          employee_id: sale?.employee_id,
+          employee_name: sale?.employee_name,
+          isUserSale,
+          userEmail: userEmail.split('@')[0],
         })
-        .reduce((sum, sale) => {
-          const amount = parseFloat(sale?.total_amount) || 0
-          //console.log('Adicionando ao total:', amount)
-          return sum + amount
-        }, 0)
 
-      /*const userSales = sales.value
-        .map((sale) => {
-          //console.log('Sale employee ID:', sale.employee_id)
-          return {
-            ...sale,
-            isCurrentUser: sale.employee_id === userIdStorage,
-          }
-        })
-        .filter((sale) => sale.isCurrentUser)
+        return isToday && isUserSale
+      })
 
-      console.log('Vendas do usuário:', userSales)
-*/
-      return userDailySales
+      console.log('Vendas filtradas:', todaySales)
+
+      // Calcular total das vendas filtradas
+      const totalDailySales = todaySales.reduce((sum, sale) => {
+        const amount = parseFloat(sale?.total_amount) || 0
+        console.log('Adicionando ao total:', amount)
+        return sum + amount
+      }, 0)
+
+      console.log('Total de vendas diárias:', totalDailySales)
+      return totalDailySales
     })
     const totalAmount = computed(() => {
       return cart.value.reduce((sum, item) => {
@@ -687,11 +706,47 @@ export default {
           throw new Error('Usuário não autenticado. Faça login novamente.')
         }
 
-        const employeeId = authStore.user.id
-        if (!employeeId) {
-          console.error('No employee ID found in user object:', authStore.user)
-          throw new Error('ID do funcionário não encontrado. Faça login novamente.')
+        // Buscar o funcionário pelo email do usuário logado
+        let userEmail = authStore.user.email
+
+        // Se o email não estiver disponível, buscar dados completos do usuário
+        if (!userEmail) {
+          console.log('Email não encontrado no auth store, buscando dados completos do usuário...')
+          console.log('Auth store user:', authStore.user)
+
+          try {
+            const { default: authService } = await import('../services/auth.service')
+            console.log('Auth service importado com sucesso')
+
+            const userData = await authService.getCurrentUser()
+            console.log('Dados do usuário obtidos:', userData)
+
+            userEmail = userData.user.email
+            console.log('Email obtido:', userEmail)
+
+            // Atualizar o auth store com os dados completos
+            authStore.setUser({
+              id: userData.user.id,
+              username: userData.user.username,
+              email: userData.user.email,
+              role: userData.user.role,
+            })
+            console.log('Auth store atualizado com sucesso')
+          } catch (error) {
+            console.error('Erro ao buscar dados do usuário:', error)
+            throw error
+          }
         }
+
+        const { default: employeeService } = await import('../services/employee.service')
+        const employee = await employeeService.getEmployeeByEmail(userEmail)
+
+        if (!employee || !employee.id) {
+          console.error('No employee found for user email:', userEmail)
+          throw new Error('Funcionário não encontrado para este usuário. Contacte o administrador.')
+        }
+
+        const employeeId = employee.id
 
         pendingSaleData.value = {
           employee_id: employeeId,

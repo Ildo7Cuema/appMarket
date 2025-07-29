@@ -26,9 +26,10 @@ const upload = multer({
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import Database from 'better-sqlite3'
+import proformaRoutes from './routes/proforma.routes.js'
 
 // Initialize database
-const db = new Database(path.join('server', 'appmarket.db'), {
+const db = new Database(path.join(__dirname, 'server', 'appmarket.db'), {
   verbose: console.log,
   fileMustExist: true,
 })
@@ -44,6 +45,9 @@ db.prepare(
     company_email TEXT,
     company_nif TEXT,
     logo_url TEXT,
+    emitter_name TEXT DEFAULT 'Eng. Ildo Cuema',
+    emitter_title TEXT DEFAULT 'Director Executivo',
+    emitter_company TEXT DEFAULT 'E-Tech Soluções Digitais, Lda',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `,
@@ -67,6 +71,9 @@ function initializeDatabase() {
       company_email TEXT,
       company_nif TEXT,
       logo_url TEXT,
+      emitter_name TEXT DEFAULT 'Eng. Ildo Cuema',
+      emitter_title TEXT DEFAULT 'Director Executivo',
+      emitter_company TEXT DEFAULT 'E-Tech Soluções Digitais, Lda',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -79,6 +86,9 @@ function initializeDatabase() {
       company_email TEXT,
       company_nif TEXT,
       logo_url TEXT,
+      emitter_name TEXT DEFAULT 'Eng. Ildo Cuema',
+      emitter_title TEXT DEFAULT 'Director Executivo',
+      emitter_company TEXT DEFAULT 'E-Tech Soluções Digitais, Lda',
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -187,13 +197,15 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
 console.log('Middleware configured')
 
 // Verificação de assinatura ativa
-import expirationCheck from './middlewares/expirationCheck.js'
+// import expirationCheck from './middlewares/expirationCheck.js'
 app.use((req, res, next) => {
   // Permite acesso à rota de assinatura sem verificação
   if (req.path.startsWith('/api/subscription')) {
     return next()
   }
-  expirationCheck(req, res, next)
+  // Temporariamente desabilitado para debug
+  // expirationCheck(req, res, next)
+  next()
 })
 
 // Log all requests
@@ -260,16 +272,22 @@ import reportsRouter from './server/routes/reports.routes.js'
 // Import seeds
 //import { createSuperAdmin } from './src/seed/super-admin.seed.js'
 import { createAdmin } from '../src/seed/admin.seed.js'
+import { syncUsersWithEmployees } from '../src/seed/employee-seed.js'
 
 // Initialize database
 // Initialize database and run seeds
 initializeDatabase()
 console.log('Database initialized')
 
+// Configure database in app.locals for routes
+app.locals.db = db
+console.log('Database configured in app.locals')
+
 // Execute seeds
 console.log('Running seeds...')
 //createSuperAdmin()
 createAdmin()
+syncUsersWithEmployees()
 
 // Settings endpoint
 app.post('/api/settings', async (req, res) => {
@@ -328,7 +346,10 @@ app.post('/api/settings', async (req, res) => {
             company_phone = ?,
             company_email = ?,
             company_nif = ?,
-            logo_url = ?
+            logo_url = ?,
+            emitter_name = ?,
+            emitter_title = ?,
+            emitter_company = ?
           WHERE id = ?
         `,
         )
@@ -340,6 +361,9 @@ app.post('/api/settings', async (req, res) => {
           settings.company_email,
           settings.company_nif,
           settings.logo_url || '',
+          settings.emitter_name || '',
+          settings.emitter_title || '',
+          settings.emitter_company || '',
           existingSettings.id,
         )
       } else {
@@ -347,8 +371,8 @@ app.post('/api/settings', async (req, res) => {
         const stmt = db.prepare(
           `
           INSERT INTO settings
-          (company_name, company_address, company_phone, company_email, company_nif, logo_url)
-          VALUES (?, ?, ?, ?, ?, ?)
+          (company_name, company_address, company_phone, company_email, company_nif, logo_url, emitter_name, emitter_title, emitter_company)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         )
 
@@ -359,6 +383,9 @@ app.post('/api/settings', async (req, res) => {
           settings.company_email,
           settings.company_nif,
           settings.logo_url || '',
+          settings.emitter_name || '',
+          settings.emitter_title || '',
+          settings.emitter_company || '',
         )
       }
 
@@ -526,6 +553,7 @@ app.post('/api/auth/login', async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
+        email: user.email,
         role: user.role,
       },
     })
@@ -533,6 +561,45 @@ app.post('/api/auth/login', async (req, res) => {
     console.error('Login error:', error)
     res.status(500).json({
       message: 'Internal server error',
+      error: error.message,
+    })
+  }
+})
+
+// Get current user data
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        message: 'No token provided',
+      })
+    }
+
+    const token = authHeader.substring(7)
+    const decoded = jwt.verify(token, JWT_SECRET)
+
+    // Get user from database
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id)
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found',
+      })
+    }
+
+    res.status(200).json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+      },
+    })
+  } catch (error) {
+    console.error('Get user error:', error)
+    res.status(401).json({
+      message: 'Invalid token',
       error: error.message,
     })
   }
@@ -560,6 +627,28 @@ app.get('/api/employees', async (req, res) => {
     return res.status(200).json(employees)
   } catch (error) {
     console.error('Error getting employees:', error)
+    return res.status(500).json({
+      message: 'Internal server error',
+      error: error.message,
+    })
+  }
+})
+
+app.get('/api/employees/by-email/:email', async (req, res) => {
+  try {
+    const { email } = req.params
+    const employee = db.prepare('SELECT * FROM employees WHERE email = ?').get(email)
+
+    if (!employee) {
+      return res.status(404).json({
+        message: 'Funcionário não encontrado',
+        error: 'EMPLOYEE_NOT_FOUND',
+      })
+    }
+
+    return res.status(200).json(employee)
+  } catch (error) {
+    console.error('Error getting employee by email:', error)
     return res.status(500).json({
       message: 'Internal server error',
       error: error.message,
@@ -2634,8 +2723,13 @@ app.get('/api/activation/status', async (req, res) => {
 app.use('/uploads', express.static('uploads'))
 console.log('Static files configured')
 
+// ProForma Invoice Routes
+console.log('Configurando rotas de proforma...')
+app.use('/api/proforma-invoices', proformaRoutes)
+console.log('Rotas de proforma configuradas')
+
 // Error handling middleware
-app.use((err, req, res) => {
+app.use((err, req, res, next) => {
   console.error('Error:', {
     message: err.message,
     stack: err.stack,
@@ -2666,6 +2760,9 @@ app.use((err, req, res) => {
     message: err.message || 'Internal server error',
     error: process.env.NODE_ENV === 'development' ? err.stack : undefined,
   })
+
+  // Call next to continue error handling chain
+  next()
 })
 
 // 404 handler

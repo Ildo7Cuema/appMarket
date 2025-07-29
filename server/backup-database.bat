@@ -21,8 +21,8 @@ set "backup_name=appmarket_backup_%timestamp%.db"
 echo Fazendo backup do banco de dados...
 echo Arquivo: %backup_name%
 
-if exist "appmarket.db" (
-    copy "appmarket.db" "backups\%backup_name%"
+if exist "server\appmarket.db" (
+    copy "server\appmarket.db" "backups\%backup_name%"
     if %errorlevel% equ 0 (
         echo.
         echo ✓ Backup criado com sucesso!
@@ -39,7 +39,7 @@ if exist "appmarket.db" (
         echo ✗ ERRO: Falha ao criar backup!
     )
 ) else (
-    echo ✗ ERRO: Arquivo appmarket.db não encontrado!
+    echo ✗ ERRO: Arquivo server\appmarket.db não encontrado!
 )
 
 echo.

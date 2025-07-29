@@ -74,6 +74,16 @@ const routes = [
         meta: { roles: ['admin', 'super-admin'] },
       },
       {
+        path: 'proforma-invoices',
+        component: () => import('pages/ProFormaInvoicePage.vue'),
+        meta: { roles: ['admin', 'super-admin'] },
+      },
+      {
+        path: 'proforma-dashboard',
+        component: () => import('pages/ProFormaDashboardPage.vue'),
+        meta: { roles: ['admin', 'super-admin'] },
+      },
+      {
         path: 'permissions',
         component: () => import('pages/PermissionsPage.vue'),
         meta: { roles: ['super-admin'] },

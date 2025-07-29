@@ -51,6 +51,9 @@ db.prepare(
     company_email TEXT,
     company_nif TEXT,
     logo_url TEXT,
+    emitter_name TEXT DEFAULT 'Eng. Ildo Cuema',
+    emitter_title TEXT DEFAULT 'Director Executivo',
+    emitter_company TEXT DEFAULT 'E-Tech Soluções Digitais, Lda',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `,

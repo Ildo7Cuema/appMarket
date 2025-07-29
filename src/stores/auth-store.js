@@ -11,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
     const storedUser = {
       id: localStorage.getItem('user_id'),
       username: localStorage.getItem('username'),
+      email: localStorage.getItem('user_email'),
       role: localStorage.getItem('role'),
     }
 
@@ -26,11 +27,13 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = {
       id: userData?.id,
       username: userData?.username,
+      email: userData?.email,
       role: userData?.role,
     }
     role.value = userData?.role
     localStorage.setItem('user_id', userData?.id || '')
     localStorage.setItem('username', userData?.username || '')
+    localStorage.setItem('user_email', userData?.email || '')
     localStorage.setItem('role', userData?.role || '')
   }
 
@@ -44,6 +47,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     role.value = null
     localStorage.removeItem('username')
+    localStorage.removeItem('user_email')
     localStorage.removeItem('role')
     localStorage.removeItem('token')
   }

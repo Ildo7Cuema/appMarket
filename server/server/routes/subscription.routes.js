@@ -1,10 +1,11 @@
 import express from 'express'
 import Database from 'better-sqlite3'
+import path from 'path'
 import { encryptData, decryptData } from '../../services/crypto.service.js'
 import axios from 'axios'
 
 const router = express.Router()
-const db = new Database('server/appmarket.db')
+const db = new Database(path.join(__dirname, '..', 'appmarket.db'))
 
 // Configuração do AppyPay
 const APPYPAY_API_URL = process.env.APPYPAY_API_URL || 'https://api.appypay.ao'

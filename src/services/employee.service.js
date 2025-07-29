@@ -12,6 +12,18 @@ export default {
     }
   },
 
+  async getEmployeeByEmail(email) {
+    try {
+      const response = await axios.get(`${API_URL}/employees/by-email/${encodeURIComponent(email)}`)
+      return response.data
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        throw new Error('Funcionário não encontrado para este usuário')
+      }
+      throw new Error('Erro ao buscar funcionário: ' + error.message)
+    }
+  },
+
   async createEmployee(employeeData) {
     console.log(this.createEmployee)
     try {

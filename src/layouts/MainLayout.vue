@@ -195,6 +195,14 @@ const allLinks = [
     roles: ['admin', 'super-admin'],
     iconColor: 'blue',
   },
+  {
+    title: 'Faturas Pró-Forma',
+    caption: 'Gestão de faturas pró-forma',
+    icon: 'receipt_long',
+    link: '/proforma-invoices',
+    roles: ['admin', 'super-admin'],
+    iconColor: 'orange',
+  },
 ]
 
 const linksList = computed(() => {

@@ -65,6 +65,32 @@ class AuthService {
       throw new Error('Erro ao buscar administradores: ' + error.message)
     }
   }
+
+  static async getCurrentUser() {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        throw new Error('No token found')
+      }
+
+      console.log('Buscando dados do usuário com token:', token.substring(0, 20) + '...')
+      console.log('URL da API:', `${API_BASE_URL}/auth/me`)
+
+      const response = await axios.get(`${API_BASE_URL}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      console.log('Resposta da API:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Erro detalhado:', error)
+      console.error('Response:', error.response?.data)
+      console.error('Status:', error.response?.status)
+      throw new Error('Erro ao buscar dados do usuário: ' + error.message)
+    }
+  }
 }
 
 export default AuthService

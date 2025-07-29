@@ -168,6 +168,7 @@ async function onSubmit() {
     authStore.setUser({
       id: user.id,
       username: username.value,
+      email: user.email,
       role: role,
     })
     authStore.setToken(token)
