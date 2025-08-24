@@ -1,1 +1,461 @@
-// app global css in SCSS form
+// ==========================================================================
+// AppMarket - Professional Design System
+// ==========================================================================
+
+// Import design tokens
+@import './quasar.variables.scss';
+
+// ==========================================================================
+// Base Styles
+// ==========================================================================
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  line-height: $leading-normal;
+  color: $grey-8;
+  background-color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ==========================================================================
+// Typography System
+// ==========================================================================
+
+.text-display-1 {
+  font-size: $font-size-4xl;
+  font-weight: $font-bold;
+  line-height: $leading-tight;
+  letter-spacing: -0.025em;
+}
+
+.text-display-2 {
+  font-size: $font-size-3xl;
+  font-weight: $font-bold;
+  line-height: $leading-tight;
+}
+
+.text-heading-1 {
+  font-size: $font-size-2xl;
+  font-weight: $font-semibold;
+  line-height: $leading-tight;
+}
+
+.text-heading-2 {
+  font-size: $font-size-xl;
+  font-weight: $font-semibold;
+  line-height: $leading-normal;
+}
+
+.text-body-large {
+  font-size: $font-size-lg;
+  font-weight: $font-normal;
+  line-height: $leading-relaxed;
+}
+
+.text-body {
+  font-size: $font-size-base;
+  font-weight: $font-normal;
+  line-height: $leading-normal;
+}
+
+.text-body-small {
+  font-size: $font-size-sm;
+  font-weight: $font-normal;
+  line-height: $leading-normal;
+}
+
+.text-caption {
+  font-size: $font-size-xs;
+  font-weight: $font-medium;
+  line-height: $leading-normal;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+// ==========================================================================
+// Card Components
+// ==========================================================================
+
+.card-modern {
+  background: white;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  border: 1px solid $grey-2;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-1px);
+  }
+
+  .card-header {
+    padding: $space-lg;
+    border-bottom: 1px solid $grey-2;
+    
+    .card-title {
+      font-size: $font-size-lg;
+      font-weight: $font-semibold;
+      color: $grey-9;
+      margin: 0;
+    }
+
+    .card-subtitle {
+      font-size: $font-size-sm;
+      color: $grey-6;
+      margin: $space-xs 0 0 0;
+    }
+  }
+
+  .card-content {
+    padding: $space-lg;
+  }
+
+  .card-footer {
+    padding: $space-lg;
+    border-top: 1px solid $grey-2;
+    background: $grey-1;
+    border-radius: 0 0 $radius-lg $radius-lg;
+  }
+}
+
+// Stats Cards
+.stats-card {
+  background: white;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-sm;
+  border: 1px solid $grey-2;
+  transition: all 0.3s ease;
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: $shadow-lg;
+    transform: translateY(-2px);
+  }
+
+  .q-card__section {
+    padding: $space-xl;
+  }
+
+  .stats-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: $radius-xl;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+  }
+
+  .stats-value {
+    font-size: $font-size-3xl;
+    font-weight: $font-bold;
+    line-height: 1;
+    margin: $space-sm 0;
+  }
+
+  .stats-label {
+    font-size: $font-size-sm;
+    font-weight: $font-medium;
+    color: $grey-6;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .stats-change {
+    font-size: $font-size-xs;
+    font-weight: $font-medium;
+    padding: 2px 8px;
+    border-radius: $radius-full;
+    
+    &.positive {
+      background: rgba($positive, 0.1);
+      color: $positive;
+    }
+    
+    &.negative {
+      background: rgba($negative, 0.1);
+      color: $negative;
+    }
+  }
+}
+
+// ==========================================================================
+// Button System
+// ==========================================================================
+
+.btn-modern {
+  border-radius: $radius-md;
+  font-weight: $font-medium;
+  padding: 12px 24px;
+  transition: all 0.2s ease;
+  border: none;
+  
+  &.btn-primary {
+    background: linear-gradient(135deg, $primary 0%, lighten($primary, 10%) 100%);
+    color: white;
+    box-shadow: $shadow-sm;
+    
+    &:hover {
+      box-shadow: $shadow-md;
+      transform: translateY(-1px);
+    }
+  }
+
+  &.btn-secondary {
+    background: $grey-1;
+    color: $grey-8;
+    border: 1px solid $grey-3;
+    
+    &:hover {
+      background: $grey-2;
+      border-color: $grey-4;
+    }
+  }
+
+  &.btn-ghost {
+    background: transparent;
+    color: $primary;
+    border: 1px solid $primary;
+    
+    &:hover {
+      background: rgba($primary, 0.05);
+    }
+  }
+}
+
+// ==========================================================================
+// Layout Components
+// ==========================================================================
+
+.page-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, $grey-1 0%, white 100%);
+}
+
+.content-area {
+  padding: $space-xl;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.section-header {
+  margin-bottom: $space-2xl;
+  
+  .section-title {
+    font-size: $font-size-3xl;
+    font-weight: $font-bold;
+    color: $grey-9;
+    margin-bottom: $space-sm;
+  }
+
+  .section-description {
+    font-size: $font-size-lg;
+    color: $grey-6;
+    line-height: $leading-relaxed;
+  }
+}
+
+// ==========================================================================
+// Form Components
+// ==========================================================================
+
+.form-modern {
+  .q-field {
+    margin-bottom: $space-lg;
+
+    .q-field__control {
+      border-radius: $radius-md;
+      border: 1px solid $grey-3;
+      background: white;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: $grey-4;
+      }
+
+      &.q-field__control--focused {
+        border-color: $primary;
+        box-shadow: 0 0 0 3px rgba($primary, 0.1);
+      }
+    }
+
+    .q-field__label {
+      font-weight: $font-medium;
+      color: $grey-7;
+    }
+  }
+
+  .q-btn {
+    @extend .btn-modern;
+  }
+}
+
+// ==========================================================================
+// Navigation Styles
+// ==========================================================================
+
+.nav-modern {
+  .nav-item {
+    border-radius: $radius-md;
+    margin: 2px 8px;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: rgba($primary, 0.05);
+    }
+
+    &.active {
+      background: rgba($primary, 0.1);
+      color: $primary;
+      
+      .q-icon {
+        color: $primary;
+      }
+    }
+
+    .nav-icon {
+      width: 20px;
+      height: 20px;
+      margin-right: $space-md;
+    }
+
+    .nav-label {
+      font-weight: $font-medium;
+      font-size: $font-size-sm;
+    }
+
+    .nav-caption {
+      font-size: $font-size-xs;
+      color: $grey-5;
+      margin-top: 2px;
+    }
+  }
+}
+
+// ==========================================================================
+// Utility Classes
+// ==========================================================================
+
+// Spacing
+.p-xs { padding: $space-xs !important; }
+.p-sm { padding: $space-sm !important; }
+.p-md { padding: $space-md !important; }
+.p-lg { padding: $space-lg !important; }
+.p-xl { padding: $space-xl !important; }
+.p-2xl { padding: $space-2xl !important; }
+
+.m-xs { margin: $space-xs !important; }
+.m-sm { margin: $space-sm !important; }
+.m-md { margin: $space-md !important; }
+.m-lg { margin: $space-lg !important; }
+.m-xl { margin: $space-xl !important; }
+.m-2xl { margin: $space-2xl !important; }
+
+// Border Radius
+.rounded-xs { border-radius: $radius-xs !important; }
+.rounded-sm { border-radius: $radius-sm !important; }
+.rounded-md { border-radius: $radius-md !important; }
+.rounded-lg { border-radius: $radius-lg !important; }
+.rounded-xl { border-radius: $radius-xl !important; }
+.rounded-full { border-radius: $radius-full !important; }
+
+// Shadows
+.shadow-sm { box-shadow: $shadow-sm !important; }
+.shadow-md { box-shadow: $shadow-md !important; }
+.shadow-lg { box-shadow: $shadow-lg !important; }
+.shadow-xl { box-shadow: $shadow-xl !important; }
+
+// Glass Morphism Effect
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+// ==========================================================================
+// Animations
+// ==========================================================================
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.4s ease-out;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+// ==========================================================================
+// Responsive Design
+// ==========================================================================
+
+@media (max-width: 768px) {
+  .content-area {
+    padding: $space-lg;
+  }
+
+  .section-header {
+    margin-bottom: $space-xl;
+    
+    .section-title {
+      font-size: $font-size-2xl;
+    }
+  }
+
+  .stats-card {
+    .q-card__section {
+      padding: $space-lg;
+    }
+  }
+}
